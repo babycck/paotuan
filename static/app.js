@@ -2691,12 +2691,13 @@ function consumeInventoryItem(itemName) {
 
 async function saveGameToServer() {
   try {
+    const notesElem = document.getElementById("player-notes");
     const payload = {
       data: {
         character: state.character,
         theme: state.theme,
         history: state.history,
-        notes: document.getElementById("player-notes").value
+        notes: notesElem ? notesElem.value : (localStorage.getItem("pf1e_player_notes") || "")
       }
     };
     await fetch("/api/save", {
@@ -2717,7 +2718,11 @@ async function loadGameFromServer() {
     if (json.data) {
       if (json.data.character) state.character = json.data.character;
       if (json.data.history) state.history = json.data.history;
-      if (json.data.notes) document.getElementById("player-notes").value = json.data.notes;
+      if (json.data.notes) {
+        const notesElem = document.getElementById("player-notes");
+        if (notesElem) notesElem.value = json.data.notes;
+        localStorage.setItem("pf1e_player_notes", json.data.notes);
+      }
       if (json.data.theme) {
         state.theme = json.data.theme;
         const subTitleElem = document.getElementById("campaign-theme-subtitle");
@@ -3460,10 +3465,12 @@ function initApp() {
 
   // 8. 场外记事本本地防剧透自动保存
   const notesTextarea = document.getElementById("player-notes");
-  notesTextarea.value = localStorage.getItem("pf1e_player_notes") || "";
-  notesTextarea.oninput = () => {
-    localStorage.setItem("pf1e_player_notes", notesTextarea.value);
-  };
+  if (notesTextarea) {
+    notesTextarea.value = localStorage.getItem("pf1e_player_notes") || "";
+    notesTextarea.oninput = () => {
+      localStorage.setItem("pf1e_player_notes", notesTextarea.value);
+    };
+  }
 
   // 尝试拉取历史存档
   loadGameFromServer();
