@@ -1397,52 +1397,81 @@ function showWizardStep(step) {
 }
 
 // 核心门派点数池契合推荐规则表
+// 核心门派点数池契合推荐规则表 (覆盖全部主流流派)
 const CLASS_RECOMMEND_RULES = [
+  {
+    name: "法师",
+    tier: "S级 · 奥术博学",
+    primaryAttr: "INT",
+    priority: ["INT", "DEX", "CON", "WIS", "CHA", "STR"],
+    reason: "高智力决定法术环阶与豁免难度，奥术博学执掌天地造化，智者策士与学者之首选！"
+  },
+  {
+    name: "术士",
+    tier: "S级 · 血脉觉醒",
+    primaryAttr: "CHA",
+    priority: ["CHA", "DEX", "CON", "WIS", "INT", "STR"],
+    reason: "高魅力主导超凡血脉，无需晨间背诵备法，心念所动即可自发施法，风华绝代！"
+  },
+  {
+    name: "游荡者",
+    tier: "S级 · 暗影巧手",
+    primaryAttr: "DEX",
+    priority: ["DEX", "INT", "CON", "WIS", "CHA", "STR"],
+    reason: "高敏捷决定先攻与闪避，偷袭暗算刀刀致命，海量技能点解机关、刺探情报无所不能！"
+  },
   {
     name: "战士",
     tier: "S级 · 铁壁挥斩",
+    primaryAttr: "STR",
     priority: ["STR", "CON", "DEX", "WIS", "INT", "CHA"],
-    reason: "高力量带来刀刀见血的近战挥斩，高体质筑牢1级气血壁垒；智力魅力仅8~10点完全无碍大局！"
+    reason: "高力量带来刀刀见血的近战挥斩，高体质筑牢气血壁垒，精通百般神兵甲胄！"
   },
   {
     name: "野蛮人",
     tier: "S级 · 狂暴巨力",
+    primaryAttr: "STR",
     priority: ["STR", "CON", "DEX", "WIS", "CHA", "INT"],
-    reason: "1级满额 12+体质点满血，狂暴战力全开，单人面对小怪围攻容错率极高！"
-  },
-  {
-    name: "圣武士",
-    tier: "S级 · 神圣独行",
-    priority: ["STR", "CHA", "CON", "WIS", "DEX", "INT"],
-    reason: "近战杀伐与魅力神恩全豁免加身，独行能抗能打能圣疗自保，单人无短板。"
-  },
-  {
-    name: "游侠",
-    tier: "A+级 · 荒野射手",
-    priority: ["DEX", "STR", "CON", "WIS", "INT", "CHA"],
-    reason: "高敏远距长弓狙杀避开肉搏反击，本职技能全面，荒野追踪与先攻优秀。"
-  },
-  {
-    name: "法师",
-    tier: "A级 · 奥术博学",
-    priority: ["INT", "DEX", "CON", "WIS", "CHA", "STR"],
-    reason: "最高大点直接给智力（决定法术环阶与豁免难度），敏体保命，力量仅8点无伤大雅。"
-  },
-  {
-    name: "游荡者",
-    tier: "A级 · 暗影巧手",
-    priority: ["DEX", "INT", "CON", "WIS", "CHA", "STR"],
-    reason: "敏捷决定先攻与闪避，智力提供海量技能点，借阴影暗算破局。"
+    reason: "全游最高 d12 生命骰，狂暴战力全开，肉搏反击刚猛绝伦，单人面对群敌极具威慑！"
   },
   {
     name: "牧师",
     tier: "A+级 · 神圣牧者",
+    primaryAttr: "WIS",
     priority: ["WIS", "CON", "CHA", "STR", "DEX", "INT"],
-    reason: "高感知决定神术环阶，引导神力群体治疗，重甲自保，单人稳健。"
+    reason: "高感知决定神术环阶，引导神力群体治疗与破魔，身披重铠亦可施法，单人探险极稳健！"
+  },
+  {
+    name: "游侠",
+    tier: "A+级 · 荒野狙杀",
+    primaryAttr: "DEX",
+    priority: ["DEX", "STR", "CON", "WIS", "INT", "CHA"],
+    reason: "高敏远距长弓狙杀避开肉搏反伤，荒野追踪与先攻优秀，兼通战斗机动与自保。"
+  },
+  {
+    name: "圣武士",
+    tier: "A+级 · 神圣独行",
+    primaryAttr: "STR",
+    priority: ["STR", "CHA", "CON", "WIS", "DEX", "INT"],
+    reason: "力量近战杀伐与魅力全豁免神恩护体，独行能抗能打能圣疗自保，破邪斩克制邪魔！"
+  },
+  {
+    name: "武僧",
+    tier: "A级 · 拳法通神",
+    primaryAttr: "WIS",
+    priority: ["WIS", "DEX", "STR", "CON", "INT", "CHA"],
+    reason: "感知与敏捷双重叠加 AC 防御，肉身如钢铁，拳脚连击疾如骤雨！"
+  },
+  {
+    name: "吟游诗人",
+    tier: "A级 · 风雅万象",
+    primaryAttr: "CHA",
+    priority: ["CHA", "DEX", "INT", "CON", "WIS", "STR"],
+    reason: "魅力主导诗篇旋律与交涉，技能广泛万象精通，周旋于各大势力与红尘俗世游刃有余。"
   }
 ];
 
-function renderClassRecommendations(scores) {
+function renderClassRecommendations(scores, activePresetKey = null) {
   const panel = document.getElementById("class-recommend-panel");
   const container = document.getElementById("recommend-cards-container");
   if (!panel || !container || !scores || scores.length < 6) return;
@@ -1450,42 +1479,55 @@ function renderClassRecommendations(scores) {
   panel.classList.remove("hidden");
   container.innerHTML = "";
 
-  const sorted = [...scores].sort((a, b) => b - a);
-  const topClasses = [];
+  const currentAbilities = state.wizard.assignedAbilities || {};
+  const sortedScores = [...scores].sort((a, b) => b - a);
 
-  if (sorted[0] >= 14 && sorted[1] >= 13) {
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "战士"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "野蛮人"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "圣武士"));
-  } else if (sorted[0] >= 15) {
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "法师"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游侠"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游荡者"));
-  } else {
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "战士"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游侠"));
-    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "牧师"));
-  }
+  // 动态加权计算：根据当前六维高低与选定志向匹配职业
+  const scoredClasses = CLASS_RECOMMEND_RULES.map(cls => {
+    const pri0 = currentAbilities[cls.priority[0]] || 10;
+    const pri1 = currentAbilities[cls.priority[1]] || 10;
+    const pri2 = currentAbilities[cls.priority[2]] || 10;
 
-  topClasses.filter(Boolean).forEach(cls => {
+    let fitScore = pri0 * 5 + pri1 * 3 + pri2 * 1.5;
+
+    // 志向加权倾斜
+    if (activePresetKey) {
+      if (activePresetKey === "scholar" && cls.name === "法师") fitScore += 120;
+      else if (activePresetKey === "noble" && (cls.name === "术士" || cls.name === "吟游诗人")) fitScore += 120;
+      else if (activePresetKey === "artisan" && cls.name === "游荡者") fitScore += 120;
+      else if (activePresetKey === "warrior" && (cls.name === "战士" || cls.name === "野蛮人")) fitScore += 120;
+      else if (activePresetKey === "balanced" && (cls.name === "游侠" || cls.name === "战士")) fitScore += 90;
+    }
+
+    return { cls, fitScore };
+  });
+
+  // 按综合匹配得分降序排序，取前 3 名
+  scoredClasses.sort((a, b) => b.fitScore - a.fitScore);
+  const topClasses = scoredClasses.slice(0, 3).map(item => item.cls);
+
+  topClasses.forEach((cls, rankIdx) => {
     const card = document.createElement("div");
-    card.className = "recommend-card";
+    card.className = `recommend-card ${rankIdx === 0 ? 'top-recommend' : ''}`;
 
     const plan = {};
     cls.priority.forEach((attr, idx) => {
-      plan[attr] = sorted[idx];
+      plan[attr] = sortedScores[idx];
     });
+
+    const isTop = (rankIdx === 0);
+    const crownBadge = isTop ? `<span style="background:linear-gradient(135deg, #d4af37, #f6d365); color:#111; font-weight:bold; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:6px;">👑 志向/命格首选</span>` : "";
 
     card.innerHTML = `
       <div class="rec-card-top">
-        <span class="rec-class-name">门派：${cls.name}</span>
+        <span class="rec-class-name">门派推荐：${cls.name} ${crownBadge}</span>
         <span class="rec-badge">${cls.tier}</span>
       </div>
       <div class="rec-reason">${cls.reason}</div>
       <div class="rec-stats-preview">
-        <strong>最优配点：</strong>力量 ${plan.STR} / 敏捷 ${plan.DEX} / 体质 ${plan.CON} / 智力 ${plan.INT} / 感知 ${plan.WIS} / 魅力 ${plan.CHA}
+        <strong>契合规划：</strong>力量 ${plan.STR} / 敏捷 ${plan.DEX} / 体质 ${plan.CON} / 智力 ${plan.INT} / 感知 ${plan.WIS} / 魅力 ${plan.CHA}
       </div>
-      <button class="btn btn-gold btn-apply-rec">★ 采纳此门派并一键归位</button>
+      <button class="btn btn-gold btn-apply-rec" data-class="${cls.name}">★ 采纳【${cls.name}】并一键归位</button>
     `;
 
     card.querySelector(".btn-apply-rec").onclick = () => {
@@ -1521,7 +1563,7 @@ const ARCHETYPE_PRESETS = {
   },
   noble: {
     name: "倾城名流",
-    targetClass: "吟游诗人",
+    targetClass: "术士",
     desc: "魅力第一，感知第二，敏捷第三 (适合后宫宠妃争宠、商界老板、名流社交、谈单融资)",
     priority: ["CHA", "WIS", "DEX", "CON", "INT", "STR"]
   },
@@ -1539,9 +1581,9 @@ const ARCHETYPE_PRESETS = {
   },
   balanced: {
     name: "凡人百态",
-    targetClass: "战士",
-    desc: "体质第一，智力第二，敏捷第三，力量第四 (普通人的一生，均衡无短板)",
-    priority: ["CON", "INT", "DEX", "STR", "WIS", "CHA"]
+    targetClass: "游侠",
+    desc: "体质第一，敏捷第二，力量第三 (普通人的一生，均衡无短板)",
+    priority: ["CON", "DEX", "STR", "INT", "WIS", "CHA"]
   }
 };
 
@@ -1575,6 +1617,9 @@ function applyArchetypePreset(presetKey) {
   document.querySelectorAll(".preset-btn").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-preset") === presetKey);
   });
+
+  // 关键联动：依据所选志向实时动态重排并刷新下方的职业推荐卡片！
+  renderClassRecommendations(state.wizard.rolledScores, presetKey);
 
   audio.playAlert();
 }
@@ -1653,6 +1698,9 @@ function renderAbilityAssignmentGrid() {
 
       // 任何手动微调后取消预设按钮独占高亮
       document.querySelectorAll(".preset-btn").forEach(btn => btn.classList.remove("active"));
+
+      // 实时动态分析：根据用户手动微调后的最新六维属性，重新测算并刷新门派推荐！
+      renderClassRecommendations(state.wizard.rolledScores, null);
     };
   });
 }
