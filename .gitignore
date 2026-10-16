@@ -1,0 +1,32 @@
+# Python 编译缓存与虚拟环境
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# 运行与打包产物
+build/
+dist/
+*.egg-info/
+
+# 敏感与临时配置
+.env
+*.log
+
+# 操作系统与 IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.antigravity_rules
+.gemini/
+
+# 临时测试存档 (保留根目录下标准存档)
+saves/temp_*.json

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>《问道大唐》PF1e 纯文字独立跑团系统</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="ink-theme">
+  <!-- 顶栏导航 -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="seal-icon">道</div>
+      <div class="header-titles">
+        <h1 class="main-title">问道大唐 · 纯文字独立跑团系统</h1>
+        <span class="sub-title" id="campaign-theme-subtitle">Pathfinder 1st Edition 全自由题材叙事引擎</span>
+      </div>
+    </div>
+
+    <!-- 移动端顶部状态快照 -->
+    <div class="mobile-status-bar" id="mobile-quick-status">
+      <span class="quick-item hp-pill">HP: <strong id="quick-hp">12/12</strong></span>
+      <span class="quick-item ac-pill">AC: <strong id="quick-ac">16</strong></span>
+      <span class="quick-item init-pill">先攻: <strong id="quick-init">+2</strong></span>
+    </div>
+
+    <div class="header-actions">
+      <button id="btn-open-wizard" class="btn btn-gold" title="开启AI司命问询式车卡向导">📜 司命车卡</button>
+      <button id="btn-save" class="btn btn-dark" title="保存当前跑团进度">💾 封存纪事</button>
+      <button id="btn-load" class="btn btn-dark" title="读取历史跑团档案">📂 开启档案</button>
+      <button id="btn-open-settings" class="btn btn-dark" title="配置 API 密钥与通信节点">⚙️ 司命心印</button>
+      <!-- 移动端侧栏抽屉开关 -->
+      <button id="btn-toggle-left" class="btn btn-icon mobile-only" title="打开人物卡">🛡️</button>
+      <button id="btn-toggle-right" class="btn btn-icon mobile-only" title="打开备忘录">📖</button>
+    </div>
+  </header>
+
+  <!-- 主体工作台三栏布局 -->
+  <main class="workbench-container">
+    <!-- 左栏：PF1e 战术人物卡面板 (遵循 CSV 权威标准模版) -->
+    <aside class="panel tactical-panel" id="panel-tactical">
+      <div class="panel-header">
+        <span class="panel-tag">PF1e 命契</span>
+        <h2>行者档案 · 战术面板</h2>
+        <button class="btn-close-drawer mobile-only" id="btn-close-left">✕</button>
+      </div>
+
+      <div class="panel-content scrollable">
+        <!-- 身份档案卡 -->
+        <section class="card profile-card">
+          <div class="profile-hero">
+            <h3 id="char-name">无名行者</h3>
+            <span class="badge badge-gold" id="char-alignment">守序中立</span>
+          </div>
+          <div class="profile-meta">
+            <span id="char-race">人类</span> · 
+            <span id="char-class">战士</span> · 
+            <span>等级 <strong id="char-level">1</strong></span> ·
+            <span id="char-gender">男</span> (<span id="char-age">20</span>岁)
+          </div>
+          <div class="token-box">
+            <span class="token-label">前世信物：</span>
+            <span class="token-val" id="char-token">防风打火机</span>
+          </div>
+        </section>
+
+        <!-- 气血与先攻格斗核心 -->
+        <section class="card combat-core-card">
+          <div class="section-title-row">
+            <h4>气血根基 (HP)</h4>
+            <span class="hp-numeric"><span id="hp-current">11</span> / <span id="hp-max">11</span></span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="hp-bar" style="width: 100%;"></div>
+          </div>
+          <div class="hp-status-tags">
+            <span class="status-tag status-normal" id="status-tag">健康行气</span>
+            <span class="hp-hint">绝对阵亡线: -<span id="death-threshold">13</span></span>
+          </div>
+
+          <!-- 先攻与战系机动 (CMB/CMD) -->
+          <div class="combat-grid">
+            <div class="combat-cell">
+              <span class="combat-label">先攻 (Init)</span>
+              <strong class="combat-val" id="combat-init">+4</strong>
+            </div>
+            <div class="combat-cell">
+              <span class="combat-label">基本攻击 (BAB)</span>
+              <strong class="combat-val" id="combat-bab">+1</strong>
+            </div>
+            <div class="combat-cell">
+              <span class="combat-label">战系机动 (CMB)</span>
+              <strong class="combat-val" id="combat-cmb">+3</strong>
+            </div>
+            <div class="combat-cell">
+              <span class="combat-label">机动防御 (CMD)</span>
+              <strong class="combat-val" id="combat-cmd">15</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- 防御等级 AC 矩阵 -->
+        <section class="card ac-card">
+          <div class="section-title-row">
+            <h4>防御等级 (AC 矩阵)</h4>
+            <span class="speed-badge">移速 <strong id="speed-val">30</strong> 尺</span>
+          </div>
+          <div class="ac-grid">
+            <div class="ac-item">
+              <span class="ac-label">标准 AC</span>
+              <strong class="ac-val" id="ac-total">16</strong>
+            </div>
+            <div class="ac-item">
+              <span class="ac-label">接触 AC</span>
+              <strong class="ac-val" id="ac-touch">12</strong>
+            </div>
+            <div class="ac-item">
+              <span class="ac-label">措手不及</span>
+              <strong class="ac-val" id="ac-flat">14</strong>
+            </div>
+          </div>
+          <div class="ac-detail-row">
+            <span>盔甲 +<strong id="ac-armor">4</strong></span>
+            <span>盾牌 +<strong id="ac-shield">0</strong></span>
+            <span>敏捷 +<strong id="ac-dex">2</strong></span>
+            <span>最大敏捷 <strong id="ac-maxdex">4</strong></span>
+          </div>
+          <div class="acp-indicator">
+            护甲检定减值 (ACP)：<strong id="ac-acp" class="danger-text">-2</strong> | 法术失败率：<strong id="ac-spellfail">20%</strong>
+          </div>
+        </section>
+
+        <!-- 六维天命属性 -->
+        <section class="card abilities-card">
+          <h4>天命六维</h4>
+          <div class="abilities-grid">
+            <div class="ability-cell">
+              <span class="abi-code">STR 力量</span>
+              <strong class="abi-score" id="abi-str">15</strong>
+              <span class="abi-mod" id="mod-str">+2</span>
+            </div>
+            <div class="ability-cell">
+              <span class="abi-code">DEX 敏捷</span>
+              <strong class="abi-score" id="abi-dex">14</strong>
+              <span class="abi-mod" id="mod-dex">+2</span>
+            </div>
+            <div class="ability-cell">
+              <span class="abi-code">CON 体质</span>
+              <strong class="abi-score" id="abi-con">13</strong>
+              <span class="abi-mod" id="mod-con">+1</span>
+            </div>
+            <div class="ability-cell">
+              <span class="abi-code">INT 智力</span>
+              <strong class="abi-score" id="abi-int">12</strong>
+              <span class="abi-mod" id="mod-int">+1</span>
+            </div>
+            <div class="ability-cell">
+              <span class="abi-code">WIS 感知</span>
+              <strong class="abi-score" id="abi-wis">10</strong>
+              <span class="abi-mod" id="mod-wis">+0</span>
+            </div>
+            <div class="ability-cell">
+              <span class="abi-code">CHA 魅力</span>
+              <strong class="abi-score" id="abi-cha">8</strong>
+              <span class="abi-mod" id="mod-cha">-1</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 三大豁免对抗 -->
+        <section class="card saves-card">
+          <h4>三大豁免对抗</h4>
+          <div class="saves-grid">
+            <div class="save-cell">
+              <span class="save-name">强韧 (Fort)</span>
+              <strong class="save-val" id="save-fort">+3</strong>
+            </div>
+            <div class="save-cell">
+              <span class="save-name">反射 (Ref)</span>
+              <strong class="save-val" id="save-ref">+2</strong>
+            </div>
+            <div class="save-cell">
+              <span class="save-name">意志 (Will)</span>
+              <strong class="save-val" id="save-will">+0</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- 佩兵与致命重击 -->
+        <section class="card weapon-card">
+          <div class="section-title-row">
+            <h4>佩刃兵戈</h4>
+            <span class="weapon-threat-badge" id="weapon-threat-badge">19-20 / ×2 重击</span>
+          </div>
+          <div class="weapon-info">
+            <div class="weapon-name" id="weapon-name">精工长剑</div>
+            <div class="weapon-stats">
+              <span>攻击加值：<strong id="weapon-ab">+3</strong></span>
+              <span>伤害：<strong id="weapon-damage">1d8+2</strong> (<span id="weapon-type">挥砍</span>)</span>
+            </div>
+          </div>
+          <button class="btn btn-gold btn-block" id="btn-roll-weapon">⚔️ 兵刃挥斩检定</button>
+        </section>
+
+        <!-- 背景特性与专长 -->
+        <section class="card traits-card">
+          <h4>背景特性与专长</h4>
+          <div class="trait-item">
+            <strong class="trait-title" id="trait-name">反制者 (战斗背景)</strong>
+            <p class="trait-desc" id="trait-desc">精于预见突袭并快速应对威胁，先攻检定获得 +2 背景加值。</p>
+          </div>
+          <div class="trait-item">
+            <strong class="trait-title" id="feat-name">猛力攻击 (入门专长)</strong>
+            <p class="trait-desc" id="feat-desc">以 -1 近战命中换取 +2 近战伤害加值。</p>
+          </div>
+        </section>
+
+        <!-- 负重阶梯表 -->
+        <section class="card load-card">
+          <div class="section-title-row">
+            <h4>负重阶梯</h4>
+            <span class="load-badge" id="load-badge">轻载 35/66 磅</span>
+          </div>
+          <div class="load-matrix-row">
+            <span>轻载: ≤<strong id="load-light">66</strong>磅</span>
+            <span>中载: ≤<strong id="load-med">133</strong>磅</span>
+            <span>重载: ≤<strong id="load-heavy">200</strong>磅</span>
+          </div>
+        </section>
+
+        <!-- 关键技能列表 -->
+        <section class="card skills-card">
+          <div class="section-title-row">
+            <h4>掌握绝活 (本职+3已算)</h4>
+            <span class="badge badge-dim">* 受防具减值</span>
+          </div>
+          <ul class="skills-list" id="skills-list">
+            <!-- 动态渲染技能条目 -->
+          </ul>
+        </section>
+      </div>
+    </aside>
+
+    <!-- 中栏：纯文字脑内剧场与自由叙事 -->
+    <section class="panel narrative-panel" id="panel-narrative">
+      <!-- 剧情文本流 -->
+      <div class="narrative-stream scrollable" id="narrative-stream">
+        <div class="narrative-entry entry-dm">
+          <div class="speaker-seal">司命</div>
+          <div class="entry-content">
+            <p><strong>乾坤初定，天命归位。</strong></p>
+            <p>命格已固，乾坤已明。行者佩剑在腰，寒甲覆身。</p>
+            <p class="narrative-question">阁下此番历练，想踏入何种题材的风云天下？（可自由输入：如唐代武周悬疑、宋末边关谍战、明末辽东血战、赛博朋克修真等任何世界观）</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 挂起悬决：金色脉冲【索骰横幅】 -->
+      <div class="banner-check hidden" id="banner-check">
+        <div class="banner-glow-strip"></div>
+        <div class="banner-body">
+          <div class="check-title-group">
+            <span class="pulse-dot"></span>
+            <span class="check-type-label" id="check-type-label">【隐匿检定】</span>
+            <span class="check-dc-badge">目标 DC: <strong id="check-dc-value">14</strong></span>
+          </div>
+          <div class="check-reason" id="check-reason-text">
+            判定：屏息借阴影避开转过身的火光视线。
+          </div>
+          <div class="check-actions-row">
+            <button class="btn btn-gold btn-action" id="btn-execute-check">
+              <span class="btn-icon">🎲</span> 投骰对抗 (<span id="check-bonus-preview">+2</span>)
+            </button>
+            <button class="btn btn-silver btn-action" id="btn-cancel-check">
+              <span class="btn-icon">↩️</span> 放弃变卦 / 改做他事
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部自由自然语言输入舱（绝对杜绝 ABCD 选项） -->
+      <footer class="narrative-input-box">
+        <div class="input-prompt-label">
+          <span class="sparkle">✦</span>
+          <span>自由声明意图（开放自然语言，知难可变卦）：</span>
+        </div>
+        <div class="input-form">
+          <textarea 
+            id="input-action" 
+            class="action-textarea" 
+            rows="2" 
+            placeholder="打字声明你的意图（例如输入想玩的题材，或描写具体动作举止……按 Enter 发送）"
+          ></textarea>
+          <button id="btn-submit-action" class="btn btn-gold btn-send">
+            <span>执笔行念</span>
+            <small>ENTER</small>
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- 右栏：场外绝密手记与风云卷宗 -->
+    <aside class="panel codex-panel" id="panel-codex">
+      <div class="panel-header">
+        <span class="panel-tag">绝密卷宗</span>
+        <h2>行者簿册 · 场外纪事</h2>
+        <button class="btn-close-drawer mobile-only" id="btn-close-right">✕</button>
+      </div>
+
+      <div class="panel-content scrollable">
+        <!-- 场外笔记（防剧透草稿本） -->
+        <section class="card notes-card">
+          <div class="section-title-row">
+            <h4>行者密札 (本地无痕暂存)</h4>
+            <span class="badge badge-dim">随手记</span>
+          </div>
+          <textarea id="player-notes" class="notes-textarea" placeholder="记录你推测的线索、可疑的口令或战术思考……内容仅保存在本地。"></textarea>
+        </section>
+
+        <!-- 战役题材与已知风云情报 -->
+        <section class="card campaign-card">
+          <h4>当前战役格局</h4>
+          <div class="clue-item">
+            <div class="clue-title">当前题材天下</div>
+            <div class="clue-desc" id="current-theme-desc">待行者定夺……</div>
+          </div>
+        </section>
+
+        <!-- PF1e 核心规则速查卡 -->
+        <section class="card rules-quick-card">
+          <h4>PF1e 规则速览</h4>
+          <ul class="quick-rules-list">
+            <li><strong>本职技能</strong>：投入点数享有 <code>+3</code> 胜任加值。</li>
+            <li><strong>穿甲减值 (ACP)</strong>：已在特技/攀爬/隐匿等8项物理技能中严格扣除。</li>
+            <li><strong>致命重击</strong>：出目达到 19-20 触发威胁，自动二次确认命中。</li>
+            <li><strong>伤残与濒死</strong>：HP为0瘫痪；低于0昏迷，负值达体质总值方始陨落。</li>
+            <li><strong>变卦机制</strong>：索骰横幅弹出后，可随时零惩罚撤销换策略。</li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 模态框 1：AI 司命问询式降噪车卡向导 -->
+  <div class="modal-overlay hidden" id="modal-wizard">
+    <div class="modal-window wizard-window">
+      <div class="modal-header">
+        <div class="wizard-step-indicator">
+          <span class="step-dot active" data-step="1">1. 问命格</span>
+          <span class="step-dot" data-step="2">2. 问血脉</span>
+          <span class="step-dot" data-step="3">3. 问门派</span>
+          <span class="step-dot" data-step="4">4. 问背景特性</span>
+          <span class="step-dot" data-step="5">5. 问信物定魄</span>
+        </div>
+        <button class="btn-close-modal" id="btn-close-wizard">✕</button>
+      </div>
+
+      <div class="wizard-body">
+        <!-- Step 1: 问命格 (4d6k3) -->
+        <div class="wizard-step-page active" id="wizard-step-1">
+          <div class="step-intro">
+            <h3>【第一步 · 问命格】：天道摇骰 (4d6 剔除最低)</h3>
+            <p>点击下方摇骰，将生成 6 组秉天地灵气所得之天道属性，由您自由归位至六维。</p>
+          </div>
+
+          <div class="roll-trigger-area">
+            <button class="btn btn-gold btn-large" id="btn-roll-4d6k3">
+              🎲 天道摇骰 (一键摇取六维)
+            </button>
+          </div>
+
+          <div class="ability-assignment-grid" id="ability-assignment-grid">
+            <!-- 动态生成 6 组下拉槽位 -->
+          </div>
+        </div>
+
+        <!-- Step 2: 问血脉 (核心 7 大种族) -->
+        <div class="wizard-step-page" id="wizard-step-2">
+          <div class="step-intro">
+            <h3>【第二步 · 问血脉】：天地初开，化身何族</h3>
+            <p>严格遵循开拓者一版 (PF1e) 核心规范，挑选你的天生血脉特质：</p>
+          </div>
+          <div class="race-cards-grid" id="race-cards-grid">
+            <!-- 7 大核心种族卡片 -->
+          </div>
+        </div>
+
+        <!-- Step 3: 问门派 (核心 11 大职业) -->
+        <div class="wizard-step-page" id="wizard-step-3">
+          <div class="step-intro">
+            <h3>【第三步 · 问门派】：仗剑走世，师承何流</h3>
+            <p>1 级生命自动取满额 HD，并初始化 BAB、优良豁免与本职技能：</p>
+          </div>
+          <div class="class-cards-grid" id="class-cards-grid">
+            <!-- 11 大核心职业卡片 -->
+          </div>
+        </div>
+
+        <!-- Step 4: 问背景特性与技能分配 -->
+        <div class="wizard-step-page" id="wizard-step-4">
+          <div class="step-intro">
+            <h3>【第四步 · 问背景与绝活】：身世特性与技能分配</h3>
+            <p>挑选一项核心背景特性，并分配 1 级可用技能点（可用技能点：<strong id="wizard-skill-points-left" class="gold-text">4</strong> 点）：</p>
+          </div>
+          <div class="trait-selection-box">
+            <label><strong>选择身世背景特性：</strong></label>
+            <select id="wizard-trait-select" class="form-input">
+              <option value="反制者">反制者 (幼时常受欺压但精于预见突袭，先攻检定获得 +2 背景加值)</option>
+              <option value="老练佣兵">老练佣兵 (长年刀口舔血，意志豁免获得 +1 背景加值)</option>
+              <option value="生性机警">生性机警 (耳聪目明，察觉检定获得 +1 背景加值且视作本职技能)</option>
+              <option value="天生神力">天生神力 (体格雄壮，冲撞与摔绊 CMB 获得 +1 背景加值)</option>
+            </select>
+          </div>
+          <div class="wizard-skills-allocator" id="wizard-skills-allocator" style="margin-top: 14px;">
+            <!-- 技能点分配表格 -->
+          </div>
+        </div>
+
+        <!-- Step 5: 问信物与兵甲定魄 -->
+        <div class="wizard-step-page" id="wizard-step-5">
+          <div class="step-intro">
+            <h3>【第五步 · 问信物】：定夺名号、形象与现代穿越信物</h3>
+            <p>万事俱备，只欠前尘印记。输入你的尊名、外貌要素与随身佩带的现代小物件。</p>
+          </div>
+          <div class="finalize-form">
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="input-char-name">行者尊名：</label>
+                <input type="text" id="input-char-name" class="form-input" value="行者" placeholder="输入姓名或道号">
+              </div>
+              <div class="form-group">
+                <label for="input-char-gender">性别：</label>
+                <select id="input-char-gender" class="form-input">
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                  <option value="其他">其他</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="input-char-age">年龄：</label>
+                <input type="number" id="input-char-age" class="form-input" value="20" min="15" max="100">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="input-char-token">前世信物（现代小物件，如瑞士军刀、防风打火机、机械表、抗生素）：</label>
+              <input type="text" id="input-char-token" class="form-input" value="防风打火机" placeholder="例如：防风打火机">
+            </div>
+            <div class="preview-box" id="wizard-final-preview">
+              <!-- 最终属性总结预览 -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <button class="btn btn-silver" id="btn-wizard-prev" disabled>上一步</button>
+        <button class="btn btn-gold" id="btn-wizard-next">下一步</button>
+        <button class="btn btn-gold hidden" id="btn-wizard-finish">印契定魄 · 降临尘世</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 2：司命心印 API 设置 -->
+  <div class="modal-overlay hidden" id="modal-settings">
+    <div class="modal-window settings-window">
+      <div class="modal-header">
+        <h3>司命心印 · 通信设置</h3>
+        <button class="btn-close-modal" id="btn-close-settings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="cfg-api-key">DeepSeek API Key：</label>
+          <input type="password" id="cfg-api-key" class="form-input" placeholder="sk-...">
+          <small class="form-hint">未配置时将使用离线内置司命测试模式，填入后将连接真实大语言模型。</small>
+        </div>
+        <div class="form-group">
+          <label for="cfg-base-url">API 接入基址 (Base URL)：</label>
+          <input type="text" id="cfg-base-url" class="form-input" value="https://api.deepseek.com">
+        </div>
+        <div class="form-group">
+          <label for="cfg-model">模型标识 (Model)：</label>
+          <input type="text" id="cfg-model" class="form-input" value="deepseek-chat">
+        </div>
+        <div class="form-group">
+          <label for="cfg-extra-prompt">额外司命附加准则 (可选)：</label>
+          <textarea id="cfg-extra-prompt" class="form-input" rows="3" placeholder="例如：增加更多悬疑暗黑江湖细节..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-silver" id="btn-test-api">🔗 连通性测试</button>
+        <button class="btn btn-gold" id="btn-save-settings">保存心印配置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 投骰动画与结算遮罩 -->
+  <div class="dice-overlay hidden" id="overlay-dice">
+    <div class="dice-stage">
+      <div class="dice-cube" id="dice-cube">
+        <div class="dice-face face-front">20</div>
+        <div class="dice-face face-back">1</div>
+        <div class="dice-face face-right">14</div>
+        <div class="dice-face face-left">7</div>
+        <div class="dice-face face-top">19</div>
+        <div class="dice-face face-bottom">12</div>
+      </div>
+      <div class="dice-result-banner hidden" id="dice-result-banner">
+        <div class="dice-crit-badge" id="dice-crit-badge"></div>
+        <div class="dice-calc-row" id="dice-calc-row">D20 (15) + 加值 (+3) = 18</div>
+        <div class="dice-vs-row" id="dice-vs-row">对抗目标 DC 14 —— 检定成功！</div>
+        <button class="btn btn-gold" id="btn-close-dice">承接天命</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 前端逻辑入口 -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "character": {
+    "profile": {
+      "name": "无名行者",
+      "race": "人类",
+      "class": "战士",
+      "level": 1,
+      "gender": "男",
+      "age": 20,
+      "alignment": "守序中立",
+      "modernToken": "防风打火机"
+    },
+    "abilities": {
+      "STR": 15,
+      "DEX": 14,
+      "CON": 13,
+      "INT": 12,
+      "WIS": 10,
+      "CHA": 8
+    },
+    "hp": {
+      "current": 11,
+      "max": 11,
+      "temp": 0
+    },
+    "speed": 30,
+    "bab": 1,
+    "initiative": 4,
+    "cmb": 3,
+    "cmd": 15,
+    "ac": {
+      "total": 16,
+      "touch": 12,
+      "flatFooted": 14,
+      "armor": 4,
+      "shield": 0,
+      "dex": 2,
+      "maxDex": 4,
+      "acp": -2,
+      "spellFail": "20%"
+    },
+    "saves": {
+      "fort": 3,
+      "ref": 2,
+      "will": 0
+    },
+    "trait": {
+      "name": "反制者 (战斗背景)",
+      "type": "init",
+      "bonus": 2,
+      "desc": "精于预见突袭并快速应对威胁，先攻检定获得 +2 背景加值。"
+    },
+    "feat": {
+      "name": "猛力攻击 (入门专长)",
+      "desc": "以 -1 近战命中换取 +2 近战伤害加值。"
+    },
+    "skills": {
+      "特技": { "ranks": 0, "isClass": false, "attr": "DEX" },
+      "攀爬": { "ranks": 1, "isClass": true, "attr": "STR" },
+      "隐匿": { "ranks": 1, "isClass": false, "attr": "DEX" },
+      "察觉": { "ranks": 1, "isClass": false, "attr": "WIS" },
+      "威吓": { "ranks": 1, "isClass": true, "attr": "CHA" }
+    },
+    "weapon": {
+      "name": "精工长剑",
+      "threatRange": [19, 20],
+      "critMultiplier": 2,
+      "damageDice": "1d8",
+      "damageType": "挥砍",
+      "attackBonus": 3
+    },
+    "load": {
+      "current": 35,
+      "lightMax": 66,
+      "medMax": 133,
+      "heavyMax": 200,
+      "status": "轻载"
+    }
+  },
+  "theme": "",
+  "history": [],
+  "notes": "命格已立，待踏入天下。"
+}
