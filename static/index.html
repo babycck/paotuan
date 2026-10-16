@@ -348,64 +348,63 @@
       </footer>
     </section>
 
-    <!-- 右栏：场外绝密手记与风云卷宗 -->
+    <!-- 右栏：全量技能矩阵、道法天书与规则法典 -->
     <aside class="panel codex-panel" id="panel-codex">
       <div class="panel-header">
-        <span class="panel-tag">绝密卷宗</span>
-        <h2>行者簿册 · 场外纪事</h2>
+        <span class="panel-tag">命途法典</span>
+        <h2>行者秘术 · 全量技能与道法</h2>
         <button class="btn-close-drawer mobile-only" id="btn-close-right">✕</button>
       </div>
 
       <div class="panel-content scrollable">
-        <!-- 随身行囊与装备全景卡片 (置顶显眼) -->
-        <section class="card inventory-summary-card" id="card-inventory-summary">
-          <div class="section-title-row">
-            <h4>🎒 随身行囊与装备</h4>
-            <button class="btn btn-gold btn-small" id="btn-open-inventory">查看行囊</button>
+        <!-- 随身行囊与装备极简卡片 -->
+        <section class="card inventory-summary-card" id="card-inventory-summary" style="padding: 10px 14px; margin-bottom: 12px;">
+          <div class="section-title-row" style="margin-bottom: 6px;">
+            <h4 style="margin: 0; font-size: 0.92rem;">🎒 随身装具与百宝匣</h4>
+            <button class="btn btn-gold btn-small" id="btn-open-inventory" style="padding: 2px 10px; font-size: 0.78rem;">展开行囊</button>
           </div>
-          <div class="inv-summary-body">
-            <div class="inv-summary-row">
-              <span class="inv-label">⚔️ 佩带兵刃：</span>
-              <strong class="gold-text" id="summary-weapon">长剑 (1d8, 19-20/x2)</strong>
-            </div>
-            <div class="inv-summary-row">
-              <span class="inv-label">🛡️ 身披甲胄：</span>
-              <strong class="gold-text" id="summary-armor">链甲衫 (AC+4, 检定-2)</strong>
-            </div>
-            <div class="inv-summary-row">
-              <span class="inv-label">📦 行囊杂物：</span>
-              <span class="dim-text" id="summary-item-count">轻伤药水x2, 绳索, 火把...</span>
-            </div>
+          <div class="inv-summary-body" style="font-size: 0.8rem; line-height: 1.4;">
+            <span id="summary-weapon" style="color: #f6d365;">长剑 (1d8)</span> · 
+            <span id="summary-armor" style="color: #cbd5e0;">链甲衫 (AC+4)</span> · 
+            <span id="summary-item-count" style="color: #a0aec0;">轻伤药水x2...</span>
           </div>
         </section>
 
-        <!-- 场外笔记（防剧透草稿本） -->
-        <section class="card notes-card">
+        <!-- 掌中秘术 · 道法天书专区 (施法职业激活) -->
+        <section class="card spells-card" id="card-spells" style="margin-bottom: 12px;">
           <div class="section-title-row">
-            <h4>行者密札 (本地无痕暂存)</h4>
-            <span class="badge badge-dim">随手记</span>
+            <h4 style="color: #f6d365;">📖 掌中秘术 · 道法天书</h4>
+            <span class="badge badge-gold" id="spell-slots-badge">法术位: 1环 2/2</span>
           </div>
-          <textarea id="player-notes" class="notes-textarea" placeholder="记录你推测的线索、可疑的口令或战术思考……内容仅保存在本地。"></textarea>
+          <div class="spells-body" id="spells-list-container">
+            <!-- 动态渲染已知法术列表，包含法术描述与【✨ 施展】按钮 -->
+          </div>
         </section>
 
-        <!-- 战役题材与已知风云情报 -->
-        <section class="card campaign-card">
-          <h4>当前战役格局</h4>
-          <div class="clue-item">
-            <div class="clue-title">当前题材天下</div>
-            <div class="clue-desc" id="current-theme-desc">待行者定夺……</div>
+        <!-- 35 项核心技能全景矩阵 (一排 3 个小按钮) -->
+        <section class="card all-skills-card" id="card-all-skills" style="margin-bottom: 12px;">
+          <div class="section-title-row">
+            <h4 style="color: #f6d365;">🎯 35项核心技能矩阵 (一键查值/投骰)</h4>
+            <span class="badge badge-dim">点击带加值投骰</span>
+          </div>
+          <p style="font-size: 0.75rem; color: #a0aec0; margin: 4px 0 8px;">
+            自动计入<strong>本职+3</strong>与<strong>穿甲减值 ACP</strong>。点击任意小按钮即可查看算式构成或直接发起检定：
+          </p>
+          <div class="skills-matrix-grid" id="skills-matrix-grid">
+            <!-- 动态渲染 35 项技能小按钮，一排 3 个 -->
           </div>
         </section>
 
         <!-- PF1e 核心规则速查卡 -->
         <section class="card rules-quick-card">
-          <h4>PF1e 规则速览</h4>
+          <h4>📜 PF1e 核心规则速览</h4>
           <ul class="quick-rules-list">
+            <li><strong>检定克制门禁</strong>：常规交谈、日常查看直接推进；唯险局与重大阻力方始索骰。</li>
             <li><strong>本职技能</strong>：投入点数享有 <code>+3</code> 胜任加值。</li>
             <li><strong>穿甲减值 (ACP)</strong>：已在特技/攀爬/隐匿等8项物理技能中严格扣除。</li>
+            <li><strong>变卦机制</strong>：索骰横幅弹出后，可随时零惩罚撤销换策略。</li>
             <li><strong>致命重击</strong>：出目达到 19-20 触发威胁，自动二次确认命中。</li>
             <li><strong>伤残与濒死</strong>：HP为0瘫痪；低于0昏迷，负值达体质总值方始陨落。</li>
-            <li><strong>变卦机制</strong>：索骰横幅弹出后，可随时零惩罚撤销换策略。</li>
           </ul>
         </section>
       </div>
@@ -790,6 +789,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_12"></script>
+  <script src="app.js?v=20261017_13"></script>
 </body>
 </html>

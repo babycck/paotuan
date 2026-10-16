@@ -584,9 +584,15 @@ function renderTacticalPanel() {
     skillsList.appendChild(li);
   });
 
-  // 联动刷新右栏行囊与装备快照
+  // 联动刷新右栏行囊与装备快照、全量 35 项技能矩阵与道法天书
   if (typeof renderInventorySummaryCard === "function") {
     renderInventorySummaryCard();
+  }
+  if (typeof renderSkillsMatrix === "function") {
+    renderSkillsMatrix();
+  }
+  if (typeof renderSpellsCard === "function") {
+    renderSpellsCard();
   }
 }
 
@@ -945,18 +951,47 @@ async function sendPlayerAction(actionText) {
   // 呈现玩家行动
   appendNarrativeEntry("user", rawText);
 
-  // 创建 DM 的待接收容器
+  // 创建 DM 的待接收容器 (植入实时状态机与计时器)
   const stream = document.getElementById("narrative-stream");
   const dmEntry = document.createElement("div");
   dmEntry.className = "narrative-entry entry-dm";
+
+  const timerStart = Date.now();
+  let timerInterval = null;
+
   dmEntry.innerHTML = `
     <div class="speaker-seal">司命</div>
-    <div class="entry-content"><p class="loading-pulse">司命运筹推演中……</p></div>
+    <div class="entry-content">
+      <div class="narrative-status-box">
+        <div class="status-header-row">
+          <span class="status-text-pulse"><span class="pulse-dot"></span><span class="status-title-text">司命运筹推演中...</span></span>
+          <span class="status-timer-badge" id="active-timer-badge">0.0s</span>
+        </div>
+        <div class="status-stage-msg" id="active-stage-msg">正在构思因果局势与阻力...</div>
+      </div>
+    </div>
   `;
   stream.appendChild(dmEntry);
   stream.scrollTop = stream.scrollHeight;
 
   const contentElem = dmEntry.querySelector(".entry-content");
+  const timerBadge = dmEntry.querySelector("#active-timer-badge");
+  const stageMsg = dmEntry.querySelector("#active-stage-msg");
+
+  const stagePrompts = [
+    { at: 0, text: "正在构思因果局势与环境阻力..." },
+    { at: 2200, text: "正在检索 PF1e 规则库并测算因果..." },
+    { at: 5000, text: "正在推演敌我战术博弈与走位..." },
+    { at: 8500, text: "正在雕琢小说级临场对白与感官细节..." },
+    { at: 14000, text: "司命神思宏阔，全速编织万字风云..." }
+  ];
+
+  timerInterval = setInterval(() => {
+    const elapsed = (Date.now() - timerStart) / 1000;
+    if (timerBadge) timerBadge.textContent = `${elapsed.toFixed(1)}s`;
+    const curStage = [...stagePrompts].reverse().find(s => (Date.now() - timerStart) >= s.at);
+    if (stageMsg && curStage) stageMsg.textContent = curStage.text;
+  }, 100);
 
   try {
     const response = await fetch("/api/chat", {
@@ -974,7 +1009,7 @@ async function sendPlayerAction(actionText) {
       throw new Error(`服务器响应异常: ${response.status}`);
     }
 
-    contentElem.innerHTML = "";
+    let hasReceivedFirstChunk = false;
     let accumulatedText = "";
 
     const reader = response.body.getReader();
@@ -994,6 +1029,14 @@ async function sendPlayerAction(actionText) {
           try {
             const parsed = JSON.parse(raw);
             if (parsed.content) {
+              if (!hasReceivedFirstChunk) {
+                hasReceivedFirstChunk = true;
+                if (timerInterval) {
+                  clearInterval(timerInterval);
+                  timerInterval = null;
+                }
+                contentElem.innerHTML = "";
+              }
               accumulatedText += parsed.content;
               contentElem.innerHTML = accumulatedText
                 .replace(/\[CHECK:.*?\]/g, "")
@@ -1010,6 +1053,11 @@ async function sendPlayerAction(actionText) {
           }
         }
       }
+    }
+
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
     }
 
     // 后处理：解析主线任务指令与索骰/战斗指令
@@ -1072,7 +1120,25 @@ async function sendPlayerAction(actionText) {
     saveGameToServer();
 
   } catch (err) {
-    contentElem.innerHTML = `<p class="danger-text">【通传受阻】：${err.message}</p>`;
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    contentElem.innerHTML = `
+      <div class="narrative-error-card">
+        <div class="error-title">⚠️ 司命通传受阻 (推演中断或网络异常)</div>
+        <div class="error-desc">${err.message || '网络连接超时或后端响应异常，请检查网络或后端容器运行状态。'}</div>
+        <button class="btn btn-retry-action" id="btn-retry-${timerStart}">🔄 重新推演此步</button>
+      </div>
+    `;
+    const retryBtn = contentElem.querySelector(`#btn-retry-${timerStart}`);
+    if (retryBtn) {
+      retryBtn.onclick = () => {
+        dmEntry.remove();
+        state.history.pop();
+        sendPlayerAction(rawText);
+      };
+    }
   }
 }
 
@@ -2051,6 +2117,183 @@ function renderInventorySummaryCard() {
   }
 }
 
+// =========================================================
+// 8.1 右栏 35 项核心技能全景矩阵 (一排 3 个)
+// =========================================================
+
+function renderSkillsMatrix() {
+  const container = document.getElementById("skills-matrix-grid");
+  if (!container) return;
+  const c = state.character;
+  if (!c) return;
+
+  container.innerHTML = "";
+
+  const SKILL_ICONS = {
+    "杂技": "🤸", "估价": "🪙", "欺骗": "🎭", "攀爬": "🧗", "交涉": "🗣️",
+    "解除装置": "🗝️", "易容": "🥸", "脱逃": "⛓️", "飞行": "🪽", "医疗": "🩹",
+    "威吓": "😠", "知识(神秘)": "🔮", "知识(地下城)": "🏰", "知识(工程)": "⚙️", "知识(地理)": "🗺️",
+    "知识(历史)": "📜", "知识(地方)": "🏘️", "知识(自然)": "🌿", "知识(贵族)": "👑", "知识(位面)": "🌌",
+    "知识(宗教)": "⛪", "语言学": "🔤", "察觉": "👁️", "表演": "🪕", "专业": "⚒️",
+    "骑术": "🐎", "察言观色": "🔍", "手上功夫": "🤹", "法术辨识": "✨", "隐匿": "🐾",
+    "生存": "🏕️", "游泳": "🏊", "使用魔法装置": "🪄"
+  };
+
+  PF1E_RULES.skills.forEach(sk => {
+    const bonusInfo = getCheckBonusDetail(sk.name);
+    const skData = c.skills ? c.skills[sk.name] : null;
+    const isClass = skData?.isClass;
+    const ranks = skData?.ranks || 0;
+    const hasPenalty = (sk.acp && (c.ac?.acp || 0) < 0);
+
+    const btn = document.createElement("button");
+    btn.className = `skill-matrix-btn ${isClass && ranks > 0 ? 'is-class-trained' : ''} ${hasPenalty ? 'has-penalty' : ''}`;
+    btn.title = `【${sk.name}】(${sk.attr})\n${bonusInfo.detail}\n点击直接带加值投骰对抗！`;
+
+    const icon = SKILL_ICONS[sk.name] || "🎯";
+    let displayName = sk.name.replace("知识(", "").replace(")", "知");
+    if (displayName.length > 4) displayName = displayName.slice(0, 4);
+
+    btn.innerHTML = `
+      <span class="sk-name">${icon} ${displayName}</span>
+      <span class="sk-mod">${fmtMod(bonusInfo.bonus)}</span>
+    `;
+
+    btn.onclick = () => {
+      performDiceRoll(`${sk.name}检定`, bonusInfo.bonus, 12, (result) => {
+        const sendText = `【玩家主动发起 · ${sk.name}检定】：投出 D20 (${result.d20}) + 修正总加值 (${fmtMod(result.bonus)}) [${bonusInfo.detail}] = 终值 ${result.total}（请司命依此推演判定后果与局势变化）`;
+        sendPlayerAction(sendText);
+      });
+    };
+
+    container.appendChild(btn);
+  });
+}
+
+// =========================================================
+// 8.2 掌中秘术 · 道法天书专区 (Spells & Combat Arts)
+// =========================================================
+
+const CLASS_SPELL_PRESETS = {
+  "法师": {
+    isCaster: true,
+    title: "📖 奥术真解 · 每日秘术",
+    slots: { current: 2, max: 2 },
+    spells: [
+      { name: "光亮术", level: "0环戏法", school: "塑能", desc: "指尖燃起明澈温光，照亮方圆20尺" },
+      { name: "法师之手", level: "0环戏法", school: "变化", desc: "隔空念力搬运移送5磅以内的未被握持之物" },
+      { name: "侦测魔法", level: "0环戏法", school: "预言", desc: "察知方圆60尺内的奥术灵光与魔法陷阱" },
+      { name: "魔法飞弹", level: "1环法术", school: "塑能", isSlot: true, desc: "发射1枚必中力场飞弹，必中造成 1d4+1 伤害" },
+      { name: "法师护甲", level: "1环法术", school: "咒法", isSlot: true, desc: "唤出隐形力场盔甲护体，提供 AC+4 防御" },
+      { name: "睡眠术", level: "1环法术", school: "惑控", isSlot: true, desc: "令最多4HD敌对目标陷入沉睡（意志豁免）" }
+    ]
+  },
+  "牧师": {
+    isCaster: true,
+    title: "📖 神圣法典 · 天恩神术",
+    slots: { current: 2, max: 2 },
+    spells: [
+      { name: "神导术", level: "0环神术", school: "预言", desc: "祈求神恩，令下一次检定或攻击获得 +1 幸运加值" },
+      { name: "稳定伤势", level: "0环神术", school: "咒法", desc: "立止濒死者流血，使其伤势稳定不再失血" },
+      { name: "治疗轻伤", level: "1环神术", school: "咒法", isSlot: true, desc: "灌注神圣生机，回复 1d8+1 点生命值" },
+      { name: "祝福术", level: "1环神术", school: "惑控", isSlot: true, desc: "神圣庇佑，全体友方攻击命中与恐慌豁免+1" }
+    ]
+  },
+  "吟游诗人": {
+    isCaster: true,
+    title: "📖 狂想诗篇 · 音律秘咒",
+    slots: { current: 2, max: 2 },
+    spells: [
+      { name: "舞光术", level: "0环戏法", school: "塑能", desc: "编织四团若隐若现的灵动光球引路" },
+      { name: "轻风术", level: "0环戏法", school: "变化", desc: "凭空生出拂面清风，熄灭火烛或吹散烟雾" },
+      { name: "魅惑人类", level: "1环法术", school: "惑控", isSlot: true, desc: "言语与音律直抵心扉，化敌为友（意志豁免）" },
+      { name: "脚底抹油", level: "1环法术", school: "变化", isSlot: true, desc: "足生疾风，基础陆地移速提升30尺" }
+    ]
+  },
+  "战士": {
+    isCaster: false,
+    title: "⚔️ 破军战技 · 兵刃专修",
+    slots: { current: 3, max: 3 },
+    spells: [
+      { name: "猛力挥砍", level: "战技", school: "近战", isSlot: true, desc: "放弃少许命中，换取伤害 +2~3 点爆发撕裂" },
+      { name: "顺势横扫", level: "战技", school: "群攻", isSlot: true, desc: "劈倒前敌后借势旋身对身侧第二名敌人连斩" },
+      { name: "全防御架势", level: "战法", school: "防守", desc: "双手持兵全力招架格挡，单轮 AC+4" }
+    ]
+  },
+  "游荡者": {
+    isCaster: false,
+    title: "🗡️ 暗影绝技 · 刺客秘传",
+    slots: { current: 3, max: 3 },
+    spells: [
+      { name: "阴影突刺 (偷袭)", level: "绝活", school: "刺杀", isSlot: true, desc: "借助潜行或夹击，额外爆发 +1d6 致命偷袭伤害" },
+      { name: "烟幕隐遁", level: "脱身", school: "遁术", isSlot: true, desc: "撒出细沙石灰迷盲敌人，无损后撤脱战" },
+      { name: "轻巧翻滚", level: "身法", school: "特技", desc: "贴地翻滚穿过敌人威胁范围，免受借机攻击" }
+    ]
+  }
+};
+
+function renderSpellsCard() {
+  const container = document.getElementById("spells-list-container");
+  const slotsBadge = document.getElementById("spell-slots-badge");
+  if (!container) return;
+  const c = state.character;
+  if (!c) return;
+
+  const className = c.profile?.class || "战士";
+  const preset = CLASS_SPELL_PRESETS[className] || CLASS_SPELL_PRESETS["战士"];
+
+  // 初始化槽位状态
+  if (!state.spellSlots || state.spellSlots.className !== className) {
+    state.spellSlots = { current: preset.slots.current, max: preset.slots.max, className: className };
+  }
+
+  if (slotsBadge) {
+    if (preset.isCaster) {
+      slotsBadge.textContent = `1环法术位: ${state.spellSlots.current}/${state.spellSlots.max}`;
+      slotsBadge.className = state.spellSlots.current > 0 ? "badge badge-gold" : "badge badge-dim";
+    } else {
+      slotsBadge.textContent = `战气点数: ${state.spellSlots.current}/${state.spellSlots.max}`;
+      slotsBadge.className = "badge badge-gold";
+    }
+  }
+
+  container.innerHTML = "";
+  preset.spells.forEach(spell => {
+    const row = document.createElement("div");
+    row.className = "spell-item-row";
+    row.innerHTML = `
+      <div class="spell-info">
+        <div class="spell-name-row">
+          <span class="spell-name">${spell.name}</span>
+          <span class="spell-level-badge">${spell.level}</span>
+        </div>
+        <div class="spell-desc">${spell.desc}</div>
+      </div>
+      <button class="btn btn-cast-spell" title="一键施展并将动作代入对白">${preset.isCaster ? '✨ 念咒施展' : '⚡ 施展'}</button>
+    `;
+
+    const castBtn = row.querySelector(".btn-cast-spell");
+    castBtn.onclick = () => {
+      if (spell.isSlot) {
+        if (state.spellSlots.current <= 0) {
+          alert(`${preset.isCaster ? '今日1环法术位已用尽，需安歇冥想方可恢复！' : '当前战气已耗尽，需稍作喘息！'}`);
+          return;
+        }
+        state.spellSlots.current -= 1;
+        renderSpellsCard();
+      }
+
+      const actionText = preset.isCaster
+        ? `【行者起手施法】：我屏气凝神，指捏法印低诵玄真咒诀，调动奥术/神圣灵光，全力施展【${spell.name}】（${spell.desc}）！`
+        : `【行者爆发战技】：我身形如电，步踏中宫，全力施展【${spell.name}】（${spell.desc}）！`;
+
+      sendPlayerAction(actionText);
+    };
+
+    container.appendChild(row);
+  });
+}
+
 function initInventoryModal() {
   const modal = document.getElementById("modal-inventory");
   const btnOpen = document.getElementById("btn-open-inventory");
@@ -2797,10 +3040,12 @@ function initApp() {
 
   document.getElementById("btn-cancel-check").onclick = () => {
     if (!state.pendingCheck) return;
+    const check = state.pendingCheck;
     hidePendingCheckBanner();
     audio.playAlert();
 
-    appendNarrativeEntry("assistant", `【变卦心决】：你权衡凶险，决意放弃原定行动，未曾掷骰，亦无损耗。你定住心神，暂避锋芒，可另谋破局生路。\n\n你接下来要干嘛？`);
+    const cancelText = `【玩家变卦撤回】：行者察觉凶险，在动作爆发前一瞬稳住心神、收力回撤，并未进行该【${check.type}】冒险举动，亦未曾投骰。请司命描述局势暂缓或对峙现状，并询问行者另作何打算。`;
+    sendPlayerAction(cancelText);
   };
 
   // 6. 初始化行商大集 · 万象货栈模态框 (替代生硬的兵刃挥斩宏)
