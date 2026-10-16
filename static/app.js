@@ -179,6 +179,163 @@ const PF1E_TRAITS = {
   }
 };
 
+// =========================================================
+// 1.2 CRB 核心专长库 (Feats) 与门派道途分支
+// =========================================================
+
+const CRB_CORE_FEATS = [
+  { id: "power_attack", name: "猛力攻击 (Power Attack)", req: "力量 13", desc: "以 -1 近战命中换取 +2 (双手武器+3) 额外近战伤害。" },
+  { id: "improved_init", name: "精通先攻 (Improved Initiative)", req: "无", desc: "战斗先攻检定直接获得 +4 加值，极速抢先出手占得先机。" },
+  { id: "toughness", name: "健壮 (Toughness)", req: "无", desc: "直接获得 +3 永久生命值上限，大幅增强生存容错。" },
+  { id: "dodge", name: "闪避 (Dodge)", req: "敏捷 13", desc: "防御等级 (AC) 永久获得 +1 闪避加值。" },
+  { id: "point_blank_shot", name: "近距离射击 (Point-Blank Shot)", req: "无", desc: "30尺内远程攻击命中检定与伤害检定各获得 +1 加值。" },
+  { id: "weapon_focus", name: "武器专攻 (Weapon Focus)", req: "BAB +1", desc: "选定武器攻击检定获得 +1 命中加值。" },
+  { id: "spell_focus", name: "法术专攻 (Spell Focus)", req: "能够施法", desc: "所选法术学派豁免难度 DC 额外 +1。" },
+  { id: "iron_will", name: "钢铁意志 (Iron Will)", req: "无", desc: "意志豁免检定直接获得 +2 永久加值。" },
+  { id: "great_fortitude", name: "强韧加强 (Great Fortitude)", req: "无", desc: "强韧豁免检定直接获得 +2 永久加值。" },
+  { id: "lightning_reflexes", name: "闪电反射 (Lightning Reflexes)", req: "无", desc: "反射豁免检定直接获得 +2 永久加值。" }
+];
+
+const CLASS_SUBCLASSES = {
+  "术士": [
+    { name: "🐉 巨龙血脉 (Draconic)", desc: "觉醒天生龙鳞防御 (天生护甲+1) 与龙之爪撕裂力量" },
+    { name: "🔮 奥术血脉 (Arcane)", desc: "获得奥术连结法杖，法术专攻更强，施法专注极高" },
+    { name: "☀️ 天界血脉 (Celestial)", desc: "获得天界神圣圣光之触，可触碰疗愈盟友或灼痛邪物" }
+  ],
+  "法师": [
+    { name: "💥 塑能学派 (Evocation)", desc: "专注强攻法术力场，魔法飞弹与火炎杀伤更强" },
+    { name: "🛡️ 防护学派 (Abjuration)", desc: "精于防护力场结界，奥术护盾与辟法防护卓越" },
+    { name: "📜 全系通用学派 (Universalist)", desc: "八大学派兼收并蓄，不偏废任何法术" }
+  ],
+  "牧师": [
+    { name: "⚔️ 战争领域 (War)", desc: "神明赐予战意祝福，兵刃交锋更显神威" },
+    { name: "🌿 治疗领域 (Healing)", desc: "引导正能量与天恩神术恢复效果更强" },
+    { name: "☀️ 太阳领域 (Sun)", desc: "神圣光辉灼照黑暗，专克不死恶煞" }
+  ],
+  "游侠": [
+    { name: "👤 第一宿敌: 人形生物 (Humanoid)", desc: "对人形敌手 (强盗/刺客/乱军) 命中与伤害+2" },
+    { name: "💀 第一宿敌: 不死生物 (Undead)", desc: "对幽魂、僵尸、骷髅命中与伤害+2" },
+    { name: "👹 第一宿敌: 异界魔物 (Outsider)", desc: "对凶煞妖魔、深渊异类追踪与伤害+2" }
+  ]
+};
+
+// 全 11 职业开局装备库 (严格符合 CRB 标准，术士法师穿法袍拿法杖，绝无穿甲失败率)
+const CLASS_STARTING_EQUIPMENT = {
+  "术士": {
+    weapon: { name: "精工橡木法杖", threatRange: [20], critMultiplier: 2, damageDice: "1d6", damageType: "钝击" },
+    armor: { name: "丝绸法袍 (无甲)", bonus: 0, maxDex: 99, acp: 0, spellFail: "0%" },
+    inventory: [
+      { name: "精工橡木法杖", category: "weapon", price: 5, weight: 4, qty: 1, equipped: true, desc: "1d6钝击, 简单双手武器" },
+      { name: "轻型弩机", category: "weapon", price: 35, weight: 4, qty: 1, equipped: false, desc: "1d8穿刺, 19-20/x2, 射程80尺" },
+      { name: "弩箭 (20支)", category: "gear", price: 2, weight: 2, qty: 1, desc: "随身弩箭弹药" },
+      { name: "丝绸法袍", category: "armor", price: 10, weight: 2, qty: 1, equipped: true, desc: "舒适透气, 0%奥术失败率" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "饮用恢复 1d8+1 点生命" },
+      { name: "施法材料包", category: "gear", price: 5, weight: 2, qty: 1, desc: "基础施法用具" }
+    ]
+  },
+  "法师": {
+    weapon: { name: "仪式法杖", threatRange: [20], critMultiplier: 2, damageDice: "1d6", damageType: "钝击" },
+    armor: { name: "学者法袍 (无甲)", bonus: 0, maxDex: 99, acp: 0, spellFail: "0%" },
+    inventory: [
+      { name: "仪式法杖", category: "weapon", price: 5, weight: 4, qty: 1, equipped: true, desc: "1d6钝击" },
+      { name: "精工匕首", category: "weapon", price: 2, weight: 1, qty: 1, equipped: false, desc: "1d4穿刺, 19-20/x2" },
+      { name: "学者法袍", category: "armor", price: 10, weight: 2, qty: 1, equipped: true, desc: "轻柔袍服, 0%施法失败率" },
+      { name: "法术书 (典籍)", category: "gear", price: 15, weight: 3, qty: 1, desc: "记载每日奥术真言" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "饮用恢复 1d8+1 点生命" }
+    ]
+  },
+  "武僧": {
+    weapon: { name: "齐眉棍", threatRange: [20], critMultiplier: 2, damageDice: "1d6", damageType: "钝击" },
+    armor: { name: "苦行僧袍 (无甲)", bonus: 0, maxDex: 99, acp: 0, spellFail: "0%" },
+    inventory: [
+      { name: "齐眉棍", category: "weapon", price: 2, weight: 4, qty: 1, equipped: true, desc: "1d6钝击, 武僧双头兵刃" },
+      { name: "苦行僧袍", category: "armor", price: 5, weight: 2, qty: 1, equipped: true, desc: "完全无甲, 完美发挥敏捷与感知双叠加 AC 防御" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "游荡者": {
+    weapon: { name: "精工短剑", threatRange: [19, 20], critMultiplier: 2, damageDice: "1d6", damageType: "穿刺" },
+    armor: { name: "精工软皮甲", bonus: 2, maxDex: 6, acp: 0, spellFail: "10%" },
+    inventory: [
+      { name: "精工短剑", category: "weapon", price: 10, weight: 2, qty: 1, equipped: true, desc: "1d6穿刺, 19-20/x2" },
+      { name: "淬毒匕首", category: "weapon", price: 5, weight: 1, qty: 2, equipped: false, desc: "1d4穿刺, 暗杀备用" },
+      { name: "精工软皮甲", category: "armor", price: 10, weight: 15, qty: 1, equipped: true, desc: "AC +2, 穿甲罚值 0 (轻巧潜行无拖累)" },
+      { name: "盗贼工具包", category: "gear", price: 30, weight: 1, qty: 1, desc: "开锁与拆卸机关陷阱必备" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "游侠": {
+    weapon: { name: "复合长弓", threatRange: [20], critMultiplier: 3, damageDice: "1d8", damageType: "穿刺" },
+    armor: { name: "镶嵌皮甲", bonus: 3, maxDex: 5, acp: -1, spellFail: "15%" },
+    inventory: [
+      { name: "复合长弓", category: "weapon", price: 100, weight: 3, qty: 1, equipped: true, desc: "1d8穿刺, 致命 x3 暴击, 射程110尺" },
+      { name: "羽箭 (40支)", category: "gear", price: 4, weight: 6, qty: 1, desc: "随身羽箭两壶" },
+      { name: "猎人短剑", category: "weapon", price: 10, weight: 2, qty: 1, equipped: false, desc: "1d6穿刺, 近战防身" },
+      { name: "镶嵌皮甲", category: "armor", price: 25, weight: 20, qty: 1, equipped: true, desc: "AC +3, 穿甲罚值 -1" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "野蛮人": {
+    weapon: { name: "精工双手巨剑", threatRange: [19, 20], critMultiplier: 2, damageDice: "2d6", damageType: "挥砍" },
+    armor: { name: "厚兽皮甲", bonus: 4, maxDex: 4, acp: -3, spellFail: "20%" },
+    inventory: [
+      { name: "精工双手巨剑", category: "weapon", price: 50, weight: 8, qty: 1, equipped: true, desc: "2d6挥砍, 19-20/x2, 刚猛巨力" },
+      { name: "厚兽皮甲", category: "armor", price: 15, weight: 25, qty: 1, equipped: true, desc: "AC +4, 穿甲罚值 -3" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "牧师": {
+    weapon: { name: "重型硬头锤", threatRange: [20], critMultiplier: 2, damageDice: "1d8", damageType: "钝击" },
+    armor: { name: "硬鳞甲", bonus: 5, maxDex: 3, acp: -4, spellFail: "25%" },
+    inventory: [
+      { name: "重型硬头锤", category: "weapon", price: 12, weight: 8, qty: 1, equipped: true, desc: "1d8钝击" },
+      { name: "硬鳞甲", category: "armor", price: 50, weight: 30, qty: 1, equipped: true, desc: "AC +5, 穿甲罚值 -4" },
+      { name: "圣徽木盾", category: "armor", price: 7, weight: 5, qty: 1, equipped: true, desc: "AC +1 盾牌加值, 镌刻神圣印记" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "德鲁伊": {
+    weapon: { name: "橡木弯刀", threatRange: [18, 20], critMultiplier: 2, damageDice: "1d6", damageType: "挥砍" },
+    armor: { name: "生皮革甲 (非金属)", bonus: 2, maxDex: 6, acp: 0, spellFail: "10%" },
+    inventory: [
+      { name: "橡木弯刀", category: "weapon", price: 15, weight: 4, qty: 1, equipped: true, desc: "1d6挥砍, 18-20/x2 极宽暴击" },
+      { name: "生皮革甲", category: "armor", price: 10, weight: 15, qty: 1, equipped: true, desc: "AC +2 (非金属天然皮甲，守戒无碍)" },
+      { name: "重木盾", category: "armor", price: 7, weight: 10, qty: 1, equipped: true, desc: "AC +2 盾牌加值" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "圣武士": {
+    weapon: { name: "精工长剑", threatRange: [19, 20], critMultiplier: 2, damageDice: "1d8", damageType: "挥砍" },
+    armor: { name: "精工链甲衫", bonus: 4, maxDex: 4, acp: -1, spellFail: "20%" },
+    inventory: [
+      { name: "精工长剑", category: "weapon", price: 15, weight: 4, qty: 1, equipped: true, desc: "1d8挥砍, 19-20/x2" },
+      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, qty: 1, equipped: true, desc: "AC +4, 穿甲罚值 -1" },
+      { name: "圣徽钢盾", category: "armor", price: 20, weight: 15, qty: 1, equipped: true, desc: "AC +2 盾牌加值" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "吟游诗人": {
+    weapon: { name: "精工细剑", threatRange: [18, 20], critMultiplier: 2, damageDice: "1d6", damageType: "穿刺" },
+    armor: { name: "精工软皮甲", bonus: 2, maxDex: 6, acp: 0, spellFail: "10%" },
+    inventory: [
+      { name: "精工细剑", category: "weapon", price: 20, weight: 2, qty: 1, equipped: true, desc: "1d6穿刺, 18-20/x2" },
+      { name: "精工软皮甲", category: "armor", price: 10, weight: 15, qty: 1, equipped: true, desc: "AC +2 (轻装无拖累)" },
+      { name: "精制鲁特琴", category: "gear", price: 35, weight: 3, qty: 1, desc: "奏乐引亢, 激发勇气之用" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  },
+  "战士": {
+    weapon: { name: "精工长剑", threatRange: [19, 20], critMultiplier: 2, damageDice: "1d8", damageType: "挥砍" },
+    armor: { name: "精工链甲衫", bonus: 4, maxDex: 4, acp: -1, spellFail: "20%" },
+    inventory: [
+      { name: "精工长剑", category: "weapon", price: 15, weight: 4, qty: 1, equipped: true, desc: "1d8挥砍, 19-20/x2" },
+      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, qty: 1, equipped: true, desc: "AC +4, 穿甲罚值 -1" },
+      { name: "重钢盾", category: "armor", price: 20, weight: 15, qty: 1, equipped: true, desc: "AC +2 盾牌加值" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "恢复 1d8+1 生命" }
+    ]
+  }
+};
+
 // 标准 PF1e 力量负重阶梯表 (中型生物: [轻载上限, 中载上限, 重载上限])
 const PF1E_LOAD_TABLE = {
   1: [3, 6, 10], 2: [6, 13, 20], 3: [10, 20, 30], 4: [13, 26, 40],
@@ -407,13 +564,21 @@ const state = {
     selectedRace: "人类",
     selectedRaceBonusAttr: "STR",
     selectedClass: "战士",
+    selectedSubclass: null,
     selectedTrait: "反制者",
+    fcbChoice: "hp",
+    selectedFeats: [],
     skillRanks: {},
     availableSkillPoints: 4,
     token: "防风打火机",
     name: "行者",
     gender: "男",
-    age: 20
+    age: 20,
+    height: 178,
+    weight: 68,
+    build: "修长匀称",
+    looks: "墨发束冠，眼眸清朗，面容端方沉静，身着素青道袍",
+    backstory: "自幼求索大道与身世真相"
   }
 };
 
@@ -506,11 +671,28 @@ function renderTacticalPanel() {
   document.getElementById("char-alignment").textContent = c.profile.alignment || "守序中立";
   document.getElementById("char-race").textContent = c.profile.race || "人类";
   document.getElementById("char-class").textContent = c.profile.class || "战士";
+  const subclassElem = document.getElementById("char-subclass");
+  if (subclassElem) subclassElem.textContent = c.profile.subclass ? `· ${c.profile.subclass}` : "";
   document.getElementById("char-level").textContent = c.profile.level || 1;
   const genderElem = document.getElementById("char-gender");
   if (genderElem) genderElem.textContent = c.profile.gender || "男";
   const ageElem = document.getElementById("char-age");
   if (ageElem) ageElem.textContent = c.profile.age || "20";
+
+  // 身高体重体态外貌展示
+  const hwElem = document.getElementById("char-height-weight");
+  if (hwElem && c.profile.height && c.profile.weight) {
+    hwElem.textContent = `${c.profile.height}cm / ${c.profile.weight}kg`;
+  }
+  const buildElem = document.getElementById("char-build");
+  if (buildElem && c.profile.build) {
+    buildElem.textContent = c.profile.build;
+  }
+  const looksElem = document.getElementById("char-looks-desc");
+  if (looksElem && c.profile.looks) {
+    looksElem.textContent = c.profile.looks;
+  }
+
   document.getElementById("char-token").textContent = c.profile.modernToken || "无";
 
   document.getElementById("hp-current").textContent = c.hp.current;
@@ -1371,9 +1553,26 @@ function initCharacterWizard() {
     wizardModal.classList.add("hidden");
   };
 
+  // 天赋职业奖励 (FCB) 实时监听
+  document.querySelectorAll('input[name="wizard-fcb"]').forEach(radio => {
+    radio.onchange = () => {
+      state.wizard.fcbChoice = radio.value;
+      if (state.wizard.currentStep === 4) {
+        renderSkillAllocator();
+      }
+    };
+  });
+
+  // 技能一键智能分配与重置
+  const btnQuickAlloc = document.getElementById("btn-quick-alloc-skills");
+  if (btnQuickAlloc) btnQuickAlloc.onclick = quickAllocSkills;
+  const btnResetAlloc = document.getElementById("btn-reset-alloc-skills");
+  if (btnResetAlloc) btnResetAlloc.onclick = resetAllocSkills;
+
   // 初始化向导初始渲染
   renderRaceCards();
   renderClassCards();
+  renderSubclassSelector();
   renderAbilityAssignmentGrid();
 }
 
@@ -1407,7 +1606,10 @@ function showWizardStep(step) {
     btnFinish.classList.add("hidden");
   }
 
-  if (step === 4) {
+  if (step === 3) {
+    renderSubclassSelector();
+  } else if (step === 4) {
+    renderFeatSelector();
     renderSkillAllocator();
   }
 }
@@ -1762,41 +1964,184 @@ function renderClassCards() {
       state.wizard.selectedClass = clsName;
       container.querySelectorAll(".choice-card").forEach(c => c.classList.remove("selected"));
       card.classList.add("selected");
+      renderSubclassSelector();
     };
     container.appendChild(card);
   });
 }
 
+// 渲染宗门道途/血脉/学派选项
+function renderSubclassSelector() {
+  const section = document.getElementById("wizard-subclass-section");
+  const optionsBox = document.getElementById("wizard-subclass-options");
+  const header = document.getElementById("wizard-subclass-header");
+  if (!section || !optionsBox) return;
+
+  const clsName = state.wizard.selectedClass || "战士";
+  const list = CLASS_SUBCLASSES[clsName];
+  if (!list || list.length === 0) {
+    section.classList.add("hidden");
+    state.wizard.selectedSubclass = null;
+    return;
+  }
+
+  section.classList.remove("hidden");
+  if (header) {
+    header.textContent = `★ 【${clsName}】专属血脉/领域/道途选择：`;
+  }
+
+  if (!state.wizard.selectedSubclass || !list.some(s => s.name === state.wizard.selectedSubclass.name)) {
+    state.wizard.selectedSubclass = list[0];
+  }
+
+  optionsBox.innerHTML = list.map(item => {
+    const isSel = (state.wizard.selectedSubclass && state.wizard.selectedSubclass.name === item.name);
+    return `
+      <div class="subclass-card ${isSel ? 'selected' : ''}" style="flex:1; min-width:200px; padding:10px; border-radius:6px; cursor:pointer; background:${isSel ? 'rgba(212,175,55,0.2)' : 'rgba(0,0,0,0.3)'}; border:1px solid ${isSel ? '#d4af37' : 'rgba(255,255,255,0.1)'}; transition:all 0.2s;" data-name="${item.name}">
+        <div style="font-weight:bold; color:${isSel ? '#f6d365' : '#e2e8f0'}; margin-bottom:4px;">${item.name}</div>
+        <div style="font-size:0.8rem; color:#a0aec0; line-height:1.4;">${item.desc}</div>
+      </div>
+    `;
+  }).join("");
+
+  optionsBox.querySelectorAll(".subclass-card").forEach((card, idx) => {
+    card.onclick = () => {
+      state.wizard.selectedSubclass = list[idx];
+      renderSubclassSelector();
+    };
+  });
+}
+
+// 计算可选专长总数 (1级基准1，人类+1，战士额外战斗专长+1)
+function getWizardMaxFeats() {
+  const race = state.wizard.selectedRace || "人类";
+  const cls = state.wizard.selectedClass || "战士";
+  let max = 1;
+  if (race === "人类") max += 1;
+  if (cls === "战士") max += 1;
+  return max;
+}
+
+// 渲染 CRB 核心专长挑选面板
+function renderFeatSelector() {
+  const grid = document.getElementById("feat-cards-grid");
+  const hint = document.getElementById("feat-select-hint");
+  if (!grid) return;
+
+  const maxFeats = getWizardMaxFeats();
+  if (!state.wizard.selectedFeats) {
+    state.wizard.selectedFeats = [];
+  }
+
+  // 首次若未选择，默认预选适配当前职业的专长
+  if (state.wizard.selectedFeats.length === 0) {
+    const cls = state.wizard.selectedClass || "战士";
+    if (cls === "法师" || cls === "术士") {
+      state.wizard.selectedFeats = ["健壮 (Toughness)", "法术专攻 (Spell Focus)"].slice(0, maxFeats);
+    } else if (cls === "游侠" || cls === "游荡者") {
+      state.wizard.selectedFeats = ["近距离射击 (Point-Blank Shot)", "闪避 (Dodge)"].slice(0, maxFeats);
+    } else {
+      state.wizard.selectedFeats = ["猛力攻击 (Power Attack)", "精通先攻 (Improved Initiative)", "健壮 (Toughness)"].slice(0, maxFeats);
+    }
+  }
+
+  if (state.wizard.selectedFeats.length > maxFeats) {
+    state.wizard.selectedFeats = state.wizard.selectedFeats.slice(0, maxFeats);
+  }
+
+  if (hint) {
+    const isHuman = (state.wizard.selectedRace === "人类");
+    const isFighter = (state.wizard.selectedClass === "战士");
+    let extraDesc = "";
+    if (isHuman && isFighter) extraDesc = " (人类+1，战士额外战斗专长+1，共3项)";
+    else if (isHuman) extraDesc = " (人类特性额外+1，共2项)";
+    else if (isFighter) extraDesc = " (战士宗门额外战斗专长+1，共2项)";
+    else extraDesc = " (标准1级自选1项)";
+    hint.textContent = `已选 ${state.wizard.selectedFeats.length} / ${maxFeats} 项${extraDesc}`;
+  }
+
+  grid.innerHTML = CRB_CORE_FEATS.map(f => {
+    const isSelected = state.wizard.selectedFeats.includes(f.name);
+    return `
+      <div class="feat-card ${isSelected ? 'selected' : ''}" style="padding:8px 10px; border-radius:6px; cursor:pointer; background:${isSelected ? 'rgba(212,175,55,0.2)' : 'rgba(0,0,0,0.35)'}; border:1px solid ${isSelected ? '#d4af37' : 'rgba(255,255,255,0.1)'}; transition:all 0.2s;" data-name="${f.name}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-weight:bold; color:${isSelected ? '#f6d365' : '#e2e8f0'}; font-size:0.86rem;">${isSelected ? '✓ ' : ''}${f.name}</span>
+          <span style="font-size:0.75rem; color:#a0aec0;">${f.req}</span>
+        </div>
+        <div style="font-size:0.78rem; color:#cbd5e0; line-height:1.4;">${f.desc}</div>
+      </div>
+    `;
+  }).join("");
+
+  grid.querySelectorAll(".feat-card").forEach(card => {
+    card.onclick = () => {
+      const featName = card.getAttribute("data-name");
+      const idx = state.wizard.selectedFeats.indexOf(featName);
+      if (idx >= 0) {
+        state.wizard.selectedFeats.splice(idx, 1);
+      } else {
+        if (state.wizard.selectedFeats.length >= maxFeats) {
+          state.wizard.selectedFeats.shift();
+        }
+        state.wizard.selectedFeats.push(featName);
+      }
+      renderFeatSelector();
+    };
+  });
+}
+
+// 渲染技能分配器 (全量22项标准技能，解开截断)
 function renderSkillAllocator() {
   const container = document.getElementById("wizard-skills-allocator");
+  if (!container) return;
   container.innerHTML = "";
+
   const clsData = PF1E_RULES.classes[state.wizard.selectedClass] || PF1E_RULES.classes["战士"];
   const intMod = calcMod(state.wizard.assignedAbilities.INT || 10);
-  const totalPoints = Math.max(1, clsData.skillPoints + intMod + (state.wizard.selectedRace === "人类" ? 1 : 0));
 
-  // 计算当前消耗的点数
+  // 天赋职业奖励 FCB
+  const fcbRadios = document.querySelectorAll('input[name="wizard-fcb"]');
+  let fcbChoice = "hp";
+  fcbRadios.forEach(r => { if (r.checked) fcbChoice = r.value; });
+  state.wizard.fcbChoice = fcbChoice;
+  const fcbBonus = (fcbChoice === "skill") ? 1 : 0;
+  const humanBonus = (state.wizard.selectedRace === "人类") ? 1 : 0;
+
+  // 1级可用总技能点 (最低1点)
+  const totalPoints = Math.max(1, clsData.skillPoints + intMod + humanBonus + fcbBonus);
+
+  // 计算当前消耗点数
   let usedPoints = 0;
   Object.values(state.wizard.skillRanks).forEach(r => { usedPoints += r; });
   state.wizard.availableSkillPoints = Math.max(0, totalPoints - usedPoints);
-  document.getElementById("wizard-skill-points-left").textContent = state.wizard.availableSkillPoints;
+  const leftElem = document.getElementById("wizard-skill-points-left");
+  if (leftElem) leftElem.textContent = state.wizard.availableSkillPoints;
 
-  PF1E_RULES.skills.slice(0, 14).forEach(sk => {
+  // 遍历全部技能 (全量 22 项，解除 slice 截断)
+  PF1E_RULES.skills.forEach(sk => {
     const isClass = clsData.classSkills.includes(sk.name);
     const ranks = state.wizard.skillRanks[sk.name] || 0;
 
     const row = document.createElement("div");
     row.className = "skill-alloc-row";
+    row.style.display = "flex";
+    row.style.justifyContent = "space-between";
+    row.style.alignItems = "center";
+    row.style.padding = "4px 8px";
+    row.style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+
     row.innerHTML = `
-      <span class="${isClass ? 'gold-text' : ''}">${isClass ? '★ ' : ''}${sk.name} (${sk.attr})</span>
+      <span class="${isClass ? 'gold-text' : ''}" style="font-size:0.86rem;">${isClass ? '★ ' : ''}${sk.name} <small style="color:#a0aec0;">(${sk.attr})</small></span>
       <div style="display:flex; align-items:center; gap:8px;">
-        <button class="alloc-btn btn-minus" ${ranks <= 0 ? 'disabled' : ''}>-</button>
-        <strong>${ranks}</strong>
-        <button class="alloc-btn btn-plus" ${state.wizard.availableSkillPoints <= 0 ? 'disabled' : ''}>+</button>
+        <button class="alloc-btn btn-minus" ${ranks <= 0 ? 'disabled' : ''} style="width:24px; height:24px; line-height:1; cursor:pointer;">-</button>
+        <strong style="width:16px; text-align:center; font-size:0.9rem; color:${ranks > 0 ? '#f6d365' : '#cbd5e0'};">${ranks}</strong>
+        <button class="alloc-btn btn-plus" ${(state.wizard.availableSkillPoints <= 0 || ranks >= 1) ? 'disabled' : ''} style="width:24px; height:24px; line-height:1; cursor:pointer;">+</button>
       </div>
     `;
 
     row.querySelector(".btn-plus").onclick = () => {
-      if (state.wizard.availableSkillPoints > 0) {
+      // 核心规则：1 级技能 rank 上限为 1
+      if (state.wizard.availableSkillPoints > 0 && (state.wizard.skillRanks[sk.name] || 0) < 1) {
         state.wizard.skillRanks[sk.name] = (state.wizard.skillRanks[sk.name] || 0) + 1;
         renderSkillAllocator();
       }
@@ -1813,33 +2158,130 @@ function renderSkillAllocator() {
   });
 }
 
+// 🌟 一键门派智能技能点分配
+function quickAllocSkills() {
+  const cls = state.wizard.selectedClass || "战士";
+  const clsData = PF1E_RULES.classes[cls] || PF1E_RULES.classes["战士"];
+  const intMod = calcMod(state.wizard.assignedAbilities.INT || 10);
+  const fcbBonus = (state.wizard.fcbChoice === "skill") ? 1 : 0;
+  const humanBonus = (state.wizard.selectedRace === "人类") ? 1 : 0;
+  const totalPoints = Math.max(1, clsData.skillPoints + intMod + humanBonus + fcbBonus);
+
+  state.wizard.skillRanks = {};
+
+  const CLASS_SKILL_PRIORITIES = {
+    "术士": ["辨识法术", "使用魔法装置", "交涉", "知识(神秘)", "察觉", "唬骗"],
+    "法师": ["辨识法术", "知识(神秘)", "知识(位面)", "知识(地城)", "察觉", "语言学"],
+    "牧师": ["医疗", "知识(宗教)", "辨识法术", "交涉", "察觉", "察言观色"],
+    "德鲁伊": ["生存", "知识(自然)", "驯养动物", "察觉", "医疗", "攀爬"],
+    "游荡者": ["隐匿", "解除装置", "特技", "察觉", "手上功夫", "脱逃", "察言观色", "唬骗"],
+    "游侠": ["生存", "察觉", "隐匿", "知识(自然)", "攀爬", "游泳", "驯养动物"],
+    "武僧": ["特技", "察觉", "察言观色", "脱逃", "攀爬", "游泳", "隐匿"],
+    "圣武士": ["交涉", "察言观色", "医疗", "知识(宗教)", "骑术"],
+    "野蛮人": ["威吓", "生存", "察觉", "攀爬", "游泳", "特技"],
+    "吟游诗人": ["交涉", "表演", "辨识法术", "使用魔法装置", "察言观色", "隐匿", "知识(本地)"],
+    "战士": ["威吓", "攀爬", "游泳", "骑术", "察觉", "生存"]
+  };
+
+  const priorityList = CLASS_SKILL_PRIORITIES[cls] || clsData.classSkills;
+  let remaining = totalPoints;
+
+  for (const skName of priorityList) {
+    if (remaining <= 0) break;
+    state.wizard.skillRanks[skName] = 1;
+    remaining--;
+  }
+
+  if (remaining > 0) {
+    for (const skName of clsData.classSkills) {
+      if (remaining <= 0) break;
+      if (!state.wizard.skillRanks[skName]) {
+        state.wizard.skillRanks[skName] = 1;
+        remaining--;
+      }
+    }
+  }
+
+  renderSkillAllocator();
+}
+
+// 🔄 重置技能点分配
+function resetAllocSkills() {
+  state.wizard.skillRanks = {};
+  renderSkillAllocator();
+}
+
+// 预览生成卡片
 function renderWizardFinalPreview() {
   const preview = document.getElementById("wizard-final-preview");
+  if (!preview) return;
+
   const cls = state.wizard.selectedClass || "战士";
   const race = state.wizard.selectedRace || "人类";
   const clsData = PF1E_RULES.classes[cls] || PF1E_RULES.classes["战士"];
   const conMod = calcMod(state.wizard.assignedAbilities.CON || 10);
-  const hpMax = clsData.hd + conMod;
+  const dexMod = calcMod(state.wizard.assignedAbilities.DEX || 10);
+  const wisMod = calcMod(state.wizard.assignedAbilities.WIS || 10);
+
+  const fcbChoice = state.wizard.fcbChoice || "hp";
+  const fcbHpBonus = (fcbChoice === "hp") ? 1 : 0;
+  const feats = state.wizard.selectedFeats || [];
+  const hasToughness = feats.some(f => f.includes("健壮"));
+  const hpMax = Math.max(1, clsData.hd + conMod + fcbHpBonus + (hasToughness ? 3 : 0));
+
   const traitSelect = document.getElementById("wizard-trait-select");
-  const traitVal = traitSelect ? traitSelect.value : "反制者";
+  const traitVal = traitSelect ? traitSelect.value : (state.wizard.selectedTrait || "反制者");
+
+  const nameVal = document.getElementById("input-char-name")?.value.trim() || "行者";
+  const genderVal = document.getElementById("input-char-gender")?.value || "男";
+  const ageVal = document.getElementById("input-char-age")?.value || "20";
+  const heightVal = document.getElementById("input-char-height")?.value || "178";
+  const weightVal = document.getElementById("input-char-weight")?.value || "68";
+  const buildVal = document.getElementById("input-char-build")?.value || "修长匀称";
+  const looksVal = document.getElementById("input-char-looks")?.value || "墨发束冠，眼眸清朗，身着素青道袍";
+  const backstoryVal = document.getElementById("input-char-backstory")?.value || "自幼求索大道与身世真相";
+
+  const subclassInfo = state.wizard.selectedSubclass ? `【${state.wizard.selectedSubclass.name}】` : "";
+  const equip = CLASS_STARTING_EQUIPMENT[cls] || CLASS_STARTING_EQUIPMENT["战士"];
+
+  let acTotal = 10;
+  let armorDesc = equip.armor.name;
+  if (cls === "武僧") {
+    const monkWis = (wisMod > 0 ? wisMod : 0);
+    acTotal = 10 + dexMod + monkWis + (feats.some(f => f.includes("闪避")) ? 1 : 0);
+    armorDesc = `无相金刚体 (无甲: 10 + 敏捷${dexMod} + 感知${monkWis}) → AC ${acTotal}`;
+  } else {
+    const appliedDex = Math.min(dexMod, equip.armor.maxDex);
+    acTotal = 10 + equip.armor.bonus + appliedDex + (feats.some(f => f.includes("闪避")) ? 1 : 0);
+    armorDesc = `${equip.armor.name} + 敏捷修正 → AC ${acTotal} (施法失败率: ${equip.armor.spellFail})`;
+  }
 
   preview.innerHTML = `
-    <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:6px; font-size:13px; line-height:1.7;">
-      <p><strong>血脉门派：</strong>${race} · ${cls} (1级)</p>
-      <p><strong>满额气血 (HP)：</strong>${hpMax} 点 (1级满额 HD: d${clsData.hd} + 体质修正 ${conMod})</p>
-      <p><strong>身世特性：</strong>${traitVal}</p>
-      <p><strong>标准防备：</strong>精工链甲衫 + 敏捷修正 → AC 16 (ACP -2)</p>
-      <p><strong>佩刃兵戈：</strong>精工长剑 (19-20 / ×2 致命重击威胁)</p>
+    <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(212,175,55,0.3); padding:14px; border-radius:6px; font-size:13px; line-height:1.7;">
+      <p><strong>尊号形貌：</strong>${nameVal} (${genderVal}，${ageVal}岁) · 身高 ${heightVal}cm / 体重 ${weightVal}kg · 【${buildVal}】</p>
+      <p><strong>外形肖像：</strong>${looksVal} <span style="color:#f6d365;">(纯正人类神采，绝无异形异化)</span></p>
+      <p><strong>宗门命盘：</strong>${race} · ${cls} 1级 ${subclassInfo}</p>
+      <p><strong>气血根基 (HP)：</strong><strong style="color:#48bb78;">${hpMax} 点</strong> (满额HD: d${clsData.hd} + 体质${conMod}${fcbHpBonus ? ' + 天赋奖励1' : ''}${hasToughness ? ' + 健壮3' : ''})</p>
+      <p><strong>身世专长：</strong>${feats.join('、') || '暂无'} | 特性: ${traitVal}</p>
+      <p><strong>正统佩装：</strong>${equip.weapon.name} (${equip.weapon.damageDice} ${equip.weapon.damageType})</p>
+      <p><strong>防备装束：</strong>${armorDesc}</p>
+      <p><strong>生平缘起：</strong>${backstoryVal}</p>
     </div>
   `;
 }
 
+// 终局封缄角色卡 (Finalize)
 function finalizeCharacterCreation() {
-  const nameInput = document.getElementById("input-char-name").value.trim() || "行者";
-  const genderInput = document.getElementById("input-char-gender").value || "男";
-  const ageInput = parseInt(document.getElementById("input-char-age").value, 10) || 20;
-  const tokenInput = document.getElementById("input-char-token").value.trim() || "家传断佩";
-  const traitSelect = document.getElementById("wizard-trait-select").value || "反制者";
+  const nameInput = document.getElementById("input-char-name")?.value.trim() || "行者";
+  const genderInput = document.getElementById("input-char-gender")?.value || "男";
+  const ageInput = parseInt(document.getElementById("input-char-age")?.value, 10) || 20;
+  const heightInput = parseInt(document.getElementById("input-char-height")?.value, 10) || 178;
+  const weightInput = parseInt(document.getElementById("input-char-weight")?.value, 10) || 68;
+  const buildInput = document.getElementById("input-char-build")?.value.trim() || "修长匀称";
+  const looksInput = document.getElementById("input-char-looks")?.value.trim() || "墨发束冠，眼眸清朗，面容端方沉静，身着素青道袍";
+  const backstoryInput = document.getElementById("input-char-backstory")?.value.trim() || "自幼求索大道与身世真相";
+  const tokenInput = document.getElementById("input-char-token")?.value.trim() || "家传断佩";
+  const traitSelect = document.getElementById("wizard-trait-select")?.value || "反制者";
 
   const race = state.wizard.selectedRace || "人类";
   const cls = state.wizard.selectedClass || "战士";
@@ -1862,16 +2304,35 @@ function finalizeCharacterCreation() {
   const dexMod = calcMod(abilities.DEX);
   const strMod = calcMod(abilities.STR);
   const wisMod = calcMod(abilities.WIS);
-  const hpMax = Math.max(1, clsData.hd + conMod);
+
+  // 天赋职业奖励与专长加值
+  const fcbChoice = state.wizard.fcbChoice || "hp";
+  const fcbHpBonus = (fcbChoice === "hp") ? 1 : 0;
+  const feats = (state.wizard.selectedFeats && state.wizard.selectedFeats.length > 0)
+    ? [...state.wizard.selectedFeats]
+    : ["猛力攻击 (Power Attack)"];
+
+  const hasToughness = feats.some(f => f.includes("健壮"));
+  const hasDodge = feats.some(f => f.includes("闪避"));
+  const hasImprovedInit = feats.some(f => f.includes("精通先攻"));
+  const hasIronWill = feats.some(f => f.includes("钢铁意志"));
+  const hasGreatFortitude = feats.some(f => f.includes("强韧加强"));
+  const hasLightningReflexes = feats.some(f => f.includes("闪电反射"));
+  const hasWeaponFocus = feats.some(f => f.includes("武器专攻"));
+
+  const hpMax = Math.max(1, clsData.hd + conMod + fcbHpBonus + (hasToughness ? 3 : 0));
 
   // 获取背景特性
   const traitData = PF1E_TRAITS[traitSelect] || PF1E_TRAITS["反制者"];
 
-  // 豁免基准
-  let willBonus = (traitData.type === "will") ? traitData.bonus : 0;
+  // 豁免基准 (含专长与特性)
+  let willBonus = (traitData.type === "will" ? traitData.bonus : 0) + (hasIronWill ? 2 : 0);
+  let fortBonus = (traitData.type === "fort" ? traitData.bonus : 0) + (hasGreatFortitude ? 2 : 0);
+  let refBonus = (traitData.type === "ref" ? traitData.bonus : 0) + (hasLightningReflexes ? 2 : 0);
+
   const saves = {
-    fort: (clsData.goodSaves.includes("fort") ? 2 : 0) + conMod,
-    ref: (clsData.goodSaves.includes("ref") ? 2 : 0) + dexMod,
+    fort: (clsData.goodSaves.includes("fort") ? 2 : 0) + conMod + fortBonus,
+    ref: (clsData.goodSaves.includes("ref") ? 2 : 0) + dexMod + refBonus,
     will: (clsData.goodSaves.includes("will") ? 2 : 0) + wisMod + willBonus
   };
 
@@ -1880,9 +2341,9 @@ function finalizeCharacterCreation() {
   const sizeModCMB = (size === "小型") ? -1 : 0;
   const sizeModAC = (size === "小型") ? 1 : 0;
 
-  // 先攻计算
+  // 先攻计算 (敏捷 + 特性 + 精通先攻专长)
   let initTraitBonus = (traitData.type === "init") ? traitData.bonus : 0;
-  const initiative = dexMod + initTraitBonus;
+  const initiative = dexMod + initTraitBonus + (hasImprovedInit ? 4 : 0);
 
   // CMB / CMD
   let cmbTraitBonus = (traitData.type === "cmb") ? traitData.bonus : 0;
@@ -1892,27 +2353,60 @@ function finalizeCharacterCreation() {
   // 负重梯度
   const loadLimits = getLoadThresholds(abilities.STR, size);
 
-  // 防御等级
-  const armorBonus = 4; // 精工链甲衫
-  const maxDex = 4;
-  const appliedDex = Math.min(dexMod, maxDex);
-  const acTotal = 10 + armorBonus + appliedDex + sizeModAC;
-  const acTouch = 10 + appliedDex + sizeModAC;
-  const acFlat = 10 + armorBonus + sizeModAC;
+  // 职业专属开局正统装备与防御结算 (杜绝术士穿链甲衫！)
+  const equipData = CLASS_STARTING_EQUIPMENT[cls] || CLASS_STARTING_EQUIPMENT["战士"];
+  let armorBonus = equipData.armor.bonus || 0;
+  let maxDex = equipData.armor.maxDex ?? 99;
+  let acp = equipData.armor.acp || 0;
+  let spellFail = equipData.armor.spellFail || "0%";
+  let dodgeBonus = hasDodge ? 1 : 0;
 
-  const weaponAb = bab + strMod + sizeModAC;
+  let acTotal = 10;
+  let acTouch = 10;
+  let acFlat = 10;
+
+  if (cls === "武僧") {
+    // PF1e CRB 核心：武僧无甲 AC = 10 + 敏捷修正 + (感知修正 > 0 ? 感知修正 : 0) + 体型 + 闪避
+    const monkWis = Math.max(0, wisMod);
+    acTotal = 10 + dexMod + monkWis + sizeModAC + dodgeBonus;
+    acTouch = 10 + dexMod + monkWis + sizeModAC + dodgeBonus;
+    acFlat = 10 + monkWis + sizeModAC;
+    maxDex = 99;
+    acp = 0;
+    spellFail = "0%";
+  } else {
+    const appliedDex = Math.min(dexMod, maxDex);
+    acTotal = 10 + armorBonus + appliedDex + sizeModAC + dodgeBonus;
+    acTouch = 10 + appliedDex + sizeModAC + dodgeBonus;
+    acFlat = 10 + armorBonus + sizeModAC;
+  }
+
+  // 武器命中加值结算
+  let weaponAb = bab + strMod + sizeModAC + (hasWeaponFocus ? 1 : 0);
+  if (cls === "法师" || cls === "术士") {
+    weaponAb = bab + dexMod + sizeModAC;
+  }
+
+  const subclassTitle = state.wizard.selectedSubclass ? state.wizard.selectedSubclass.name : "";
 
   state.character = {
     profile: {
       name: nameInput,
       gender: genderInput,
       age: ageInput,
+      height: heightInput,
+      weight: weightInput,
+      build: buildInput,
+      looks: looksInput,
+      backstory: backstoryInput,
       race: race,
       class: cls,
+      subclass: subclassTitle,
       level: 1,
       alignment: "守序中立",
       modernToken: tokenInput
     },
+    racialTraits: raceData ? raceData.traits : "",
     abilities: abilities,
     hp: { current: hpMax, max: hpMax, temp: 0 },
     ac: {
@@ -1921,10 +2415,10 @@ function finalizeCharacterCreation() {
       flatFooted: acFlat,
       armor: armorBonus,
       shield: 0,
-      dex: appliedDex,
+      dex: Math.min(dexMod, maxDex),
       maxDex: maxDex,
-      acp: -2,
-      spellFail: "20%"
+      acp: acp,
+      spellFail: spellFail
     },
     speed: raceData ? raceData.speed : 30,
     bab: bab,
@@ -1933,21 +2427,23 @@ function finalizeCharacterCreation() {
     cmd: cmd,
     saves: saves,
     trait: traitData,
+    feats: feats,
     feat: {
-      name: "猛力攻击 (入门专长)",
-      desc: "以 -1 近战命中换取 +2 近战伤害加值。"
+      name: feats.join("、"),
+      desc: `已习得核心专长：${feats.join("、")}`
     },
     skills: {},
     weapon: {
-      name: "精工长剑",
-      threatRange: [19, 20],
-      critMultiplier: 2,
-      damageDice: "1d8",
-      damageType: "挥砍",
+      name: equipData.weapon.name,
+      threatRange: equipData.weapon.threatRange,
+      critMultiplier: equipData.weapon.critMultiplier,
+      damageDice: equipData.weapon.damageDice,
+      damageType: equipData.weapon.damageType,
       attackBonus: weaponAb
     },
+    inventory: equipData.inventory ? JSON.parse(JSON.stringify(equipData.inventory)) : [],
     load: {
-      current: 35,
+      current: equipData.inventory ? equipData.inventory.reduce((sum, item) => sum + (item.weight * (item.qty || 1)), 0) : 15,
       lightMax: loadLimits.light,
       medMax: loadLimits.med,
       heavyMax: loadLimits.heavy,
@@ -1968,24 +2464,32 @@ function finalizeCharacterCreation() {
     }
   });
 
-  // 若无额外分配，默认预填代表性冒险技能
+  // 若无额外分配，默认触发一键智能门派技能分配
   if (Object.keys(state.character.skills).length === 0) {
-    ["特技", "察觉", "隐匿", "攀爬", "威吓"].forEach((skName, idx) => {
-      const skDef = PF1E_RULES.skills.find(s => s.name === skName);
-      state.character.skills[skName] = {
-        ranks: idx === 0 ? 0 : 1,
-        isClass: clsData.classSkills.includes(skName),
-        attr: skDef ? skDef.attr : "STR"
-      };
+    quickAllocSkills();
+    Object.keys(state.wizard.skillRanks).forEach(skName => {
+      const ranks = state.wizard.skillRanks[skName];
+      if (ranks > 0) {
+        const skDef = PF1E_RULES.skills.find(s => s.name === skName);
+        state.character.skills[skName] = {
+          ranks: ranks,
+          isClass: clsData.classSkills.includes(skName),
+          attr: skDef ? skDef.attr : "STR"
+        };
+      }
     });
   }
 
+  // 刷新左侧战术面板与法术/绝技卡片
   renderTacticalPanel();
+  if (typeof renderSpellsCard === "function") {
+    renderSpellsCard();
+  }
 
   // 若为传奇继承者（前人陨落，后人接力），保留世界观题材、暗络大纲与编年史
   if (state.isLegacySuccession) {
     state.isLegacySuccession = false;
-    const legacyIntro = `【传奇继承者破局入局】：前代行者虽已长眠，但因果未断、主线犹存！新一代行者【${nameInput}】（时年 ${ageInput} 岁，${race}${cls}）身携【${tokenInput}】，追寻前代遗留的蛛丝马迹与未竟之局正式入局！\n\n请司命以此全新视角，紧密承接前代行者的故事线索展开推演！`;
+    const legacyIntro = `【传奇继承者破局入局】：前代行者虽已长眠，但因果未断、主线犹存！新一代行者【${nameInput}】（时年 ${ageInput} 岁，${race}${cls}${subclassTitle ? '·' + subclassTitle : ''}）身携【${tokenInput}】，追寻前代遗留的蛛丝马迹与未竟之局正式入局！\n\n请司命以此全新视角，紧密承接前代行者的故事线索展开推演！`;
     appendNarrativeEntry("assistant", legacyIntro);
     state.history.push({ role: "assistant", content: legacyIntro });
     sendPlayerAction(`我（${nameInput}，${ageInput}岁，${race}${cls}）手持【${tokenInput}】，来到了前代行者留有最后音讯的这片天地，收敛心神、探查四周局势。`);
@@ -2000,10 +2504,10 @@ function finalizeCharacterCreation() {
   state.campaignArc = null;
 
   const stream = document.getElementById("narrative-stream");
-  stream.innerHTML = "";
+  if (stream) stream.innerHTML = "";
 
   const tokenDesc = (tokenInput && tokenInput !== "无") ? `，随身佩带信物【${tokenInput}】` : "，孑然一身独步江湖";
-  const promptText = `【印契定魄】：行者【${nameInput}】乾坤命格已凝结定魄！佩剑在腰，寒甲覆身${tokenDesc}。\n\n命盘已开，风云待定。请阁下以故事背景告知你想玩一个什么样的故事？（可自由打字描写你心仪的故事背景与世界观，司命将以此展开专属单人跑团！）`;
+  const promptText = `【印契定魄】：行者【${nameInput}】（${genderInput}，${ageInput}岁，身高${heightInput}cm/体重${weightInput}kg，${race}${cls}${subclassTitle ? '·' + subclassTitle : ''}）乾坤命格已凝结定魄！手持【${equipData.weapon.name}】，${tokenDesc}。\n\n命盘已开，风云待定。请阁下以故事背景告知你想玩一个什么样的故事？（可自由打字描写你心仪的故事背景与世界观，司命将据此展开专属单人跑团！）`;
   appendNarrativeEntry("assistant", promptText);
 
   saveGameToServer();
@@ -2491,14 +2995,29 @@ function openSkillDetailModal(sk, bonusInfo, icon) {
 // =========================================================
 
 const CLASS_SPELL_PRESETS = {
+  "术士": {
+    isCaster: true,
+    title: "🔮 超凡血脉 · 术道天书",
+    slots: { current: 4, max: 4 },
+    spells: [
+      { name: "酸液飞溅", level: "0环戏法", school: "咒法", desc: "指尖凝出高腐蚀性强酸飞矢，远程魔法接触命中造成 1d3 强酸伤害 (无限施展)" },
+      { name: "光亮术", level: "0环戏法", school: "塑能", desc: "引动明澈灵光附着法杖，照亮方圆20尺黑暗 (无限施展)" },
+      { name: "法师之手", level: "0环戏法", school: "变化", desc: "隔空念力搬运移送5磅以内的未被握持之物 (无限施展)" },
+      { name: "侦测魔法", level: "0环戏法", school: "预言", desc: "察知方圆60尺内的奥术灵光与魔法陷阱 (无限施展)" },
+      { name: "魔法飞弹", level: "1环法术", school: "塑能", isSlot: true, desc: "发射1枚必中力场飞弹，无视闪避护甲强制定点打击造成 1d4+1 力场伤害" },
+      { name: "燃烧之手", level: "1环法术", school: "塑能", isSlot: true, desc: "双掌喷涌扇形锥面烈焰，对范围内所有敌人造成 1d4 火焰真伤" },
+      { name: "奥术护盾术", level: "1环法术", school: "防护", isSlot: true, desc: "唤出悬浮隐形力场巨盾，提供 AC+4 防御且免疫魔法飞弹" },
+      { name: "催眠沉睡术", level: "1环法术", school: "惑控", isSlot: true, desc: "引导梦魇灵光，令最多 4HD 的敌对杂兵瞬间陷入深度沉睡" }
+    ]
+  },
   "法师": {
     isCaster: true,
     title: "📖 奥术真解 · 每日秘术",
-    slots: { current: 2, max: 2 },
+    slots: { current: 3, max: 3 },
     spells: [
-      { name: "光亮术", level: "0环戏法", school: "塑能", desc: "指尖燃起明澈温光，照亮方圆20尺" },
-      { name: "法师之手", level: "0环戏法", school: "变化", desc: "隔空念力搬运移送5磅以内的未被握持之物" },
-      { name: "侦测魔法", level: "0环戏法", school: "预言", desc: "察知方圆60尺内的奥术灵光与魔法陷阱" },
+      { name: "光亮术", level: "0环戏法", school: "塑能", desc: "指尖燃起明澈温光，照亮方圆20尺 (无限施展)" },
+      { name: "法师之手", level: "0环戏法", school: "变化", desc: "隔空念力搬运移送5磅以内的未被握持之物 (无限施展)" },
+      { name: "侦测魔法", level: "0环戏法", school: "预言", desc: "察知方圆60尺内的奥术灵光与魔法陷阱 (无限施展)" },
       { name: "魔法飞弹", level: "1环法术", school: "塑能", isSlot: true, desc: "发射1枚必中力场飞弹，必中造成 1d4+1 伤害" },
       { name: "法师护甲", level: "1环法术", school: "咒法", isSlot: true, desc: "唤出隐形力场盔甲护体，提供 AC+4 防御" },
       { name: "睡眠术", level: "1环法术", school: "惑控", isSlot: true, desc: "令最多4HD敌对目标陷入沉睡（意志豁免）" }
@@ -2507,21 +3026,75 @@ const CLASS_SPELL_PRESETS = {
   "牧师": {
     isCaster: true,
     title: "📖 神圣法典 · 天恩神术",
-    slots: { current: 2, max: 2 },
+    slots: { current: 3, max: 3 },
     spells: [
-      { name: "神导术", level: "0环神术", school: "预言", desc: "祈求神恩，令下一次检定或攻击获得 +1 幸运加值" },
-      { name: "稳定伤势", level: "0环神术", school: "咒法", desc: "立止濒死者流血，使其伤势稳定不再失血" },
+      { name: "神导术", level: "0环神术", school: "预言", desc: "祈求神恩，令下一次检定或攻击获得 +1 幸运加值 (无限施展)" },
+      { name: "稳定伤势", level: "0环神术", school: "咒法", desc: "立止濒死者流血，使其伤势稳定不再失血 (无限施展)" },
+      { name: "引导神力", level: "神恩", school: "正能量", isSlot: true, desc: "爆发出 30 尺神圣正能量光环，全体友方回复 1d6 生命 (或重创不死生物)" },
       { name: "治疗轻伤", level: "1环神术", school: "咒法", isSlot: true, desc: "灌注神圣生机，回复 1d8+1 点生命值" },
       { name: "祝福术", level: "1环神术", school: "惑控", isSlot: true, desc: "神圣庇佑，全体友方攻击命中与恐慌豁免+1" }
+    ]
+  },
+  "德鲁伊": {
+    isCaster: true,
+    title: "🌿 自然律法 · 荒野真言",
+    slots: { current: 3, max: 3 },
+    spells: [
+      { name: "神导术", level: "0环神术", school: "预言", desc: "自然之灵指引，下一次检定获得 +1 幸运加值 (无限施展)" },
+      { name: "造水术", level: "0环神术", school: "咒法", desc: "引动天地甘霖，创造2加仑纯净饮用水 (无限施展)" },
+      { name: "纠缠术", level: "1环神术", school: "变化", isSlot: true, desc: "令方圆40尺内的杂草藤蔓疯长缠绕敌人脚步，阻滞行动" },
+      { name: "长角冲撞", level: "1环神术", school: "变化", isSlot: true, desc: "额生苍劲兽角，近战冲锋爆发致命穿刺伤害" },
+      { name: "治疗轻伤", level: "1环神术", school: "咒法", isSlot: true, desc: "呼唤甘霖滋润伤躯，恢复 1d8+1 点生命" }
+    ]
+  },
+  "野蛮人": {
+    isCaster: false,
+    title: "🔥 蛮血狂暴 · 怒意狂涛",
+    slots: { current: 4, max: 4 },
+    spells: [
+      { name: "激活狂暴 (Rage)", level: "本能", school: "怒气", isSlot: true, desc: "激发狂暴本能，力量+4、体质+4、意志+2，气血上限激增，战力毁天灭地" },
+      { name: "狂暴巨刃劈斩", level: "战技", school: "近战", isSlot: true, desc: "借狂暴巨力横斩敌手，伤害额外追加 +3 暴力碾压" },
+      { name: "战吼威吓", level: "战威", school: "音波", desc: "发出震耳欲聋的蛮荒咆哮，令心虚之敌战栗胆寒" }
+    ]
+  },
+  "圣武士": {
+    isCaster: false,
+    title: "✨ 神圣誓约 · 破邪裁决",
+    slots: { current: 2, max: 2 },
+    spells: [
+      { name: "神圣破邪斩 (Smite Evil)", level: "裁决", school: "誓约", isSlot: true, desc: "唤起圣光裁决恶首，命中检定加入魅力加值，对恶徒伤害翻倍且无视伤害减免" },
+      { name: "圣疗神迹 (Lay on Hands)", level: "神愈", school: "神圣", isSlot: true, desc: "手抚伤躯释放纯净圣光，即刻回复 1d6 生命并止血" },
+      { name: "侦测邪恶光环", level: "洞悉", school: "预言", desc: "双眸洞察世间人心，精准识别周遭是否隐匿邪煞与魔道奸细" }
+    ]
+  },
+  "游侠": {
+    isCaster: false,
+    title: "🏹 荒野游侠 · 猎杀印记",
+    slots: { current: 3, max: 3 },
+    spells: [
+      { name: "宿敌猎杀标记", level: "战法", school: "追踪", isSlot: true, desc: "锁定第一宿敌气机，对其发起的所有攻击命中与伤害检定+2" },
+      { name: "远距专注狙杀", level: "射术", school: "远程", isSlot: true, desc: "凝神拉满长弓，长距射击不受射程罚值，额外附带致命穿刺" },
+      { name: "疾风步 (轻灵)", level: "身法", school: "移速", desc: "步履轻盈如风，单回合移速提升 20 尺穿梭树冠险境" }
+    ]
+  },
+  "武僧": {
+    isCaster: false,
+    title: "🥋 禅宗古武 · 气宗连击",
+    slots: { current: 3, max: 3 },
+    spells: [
+      { name: "疾风连击 (Flurry)", level: "武道", school: "近战", isSlot: true, desc: "电光石火间连环轰出双拳/棍术，单回合连续发动两次高命中打击" },
+      { name: "震慑快拳 (Stunning Fist)", level: "秘孔", school: "点穴", isSlot: true, desc: "重点击中敌方气穴，敌方强韧豁免失败将陷入眩晕 1 轮无法行动" },
+      { name: "禅宗吐纳守心", level: "守心", school: "防御", desc: "凝神吐纳沉稳下盘，豁免抗性全面提升" }
     ]
   },
   "吟游诗人": {
     isCaster: true,
     title: "📖 狂想诗篇 · 音律秘咒",
-    slots: { current: 2, max: 2 },
+    slots: { current: 3, max: 3 },
     spells: [
-      { name: "舞光术", level: "0环戏法", school: "塑能", desc: "编织四团若隐若现的灵动光球引路" },
-      { name: "轻风术", level: "0环戏法", school: "变化", desc: "凭空生出拂面清风，熄灭火烛或吹散烟雾" },
+      { name: "激发勇气 (演奏)", level: "表演", school: "音律", isSlot: true, desc: "拨动琴弦引亢高歌，全场友方命中检定与伤害检定各获 +1 士气加值" },
+      { name: "舞光术", level: "0环戏法", school: "塑能", desc: "编织四团若隐若现的灵动光球引路 (无限施展)" },
+      { name: "轻风术", level: "0环戏法", school: "变化", desc: "凭空生出拂面清风，熄灭火烛或吹散烟雾 (无限施展)" },
       { name: "魅惑人类", level: "1环法术", school: "惑控", isSlot: true, desc: "言语与音律直抵心扉，化敌为友（意志豁免）" },
       { name: "脚底抹油", level: "1环法术", school: "变化", isSlot: true, desc: "足生疾风，基础陆地移速提升30尺" }
     ]

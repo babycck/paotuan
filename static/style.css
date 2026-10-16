@@ -2556,6 +2556,64 @@ html, body {
   padding-top: 8px !important;
 }
 
+/* 专长卡片样式 */
+.feat-choice-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.feat-choice-card:hover {
+  border-color: rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.05);
+}
+.feat-choice-card.selected {
+  border-color: #f6d365;
+  background: rgba(212, 175, 55, 0.15);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+.feat-card-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  color: #f6d365;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+.feat-card-desc {
+  font-size: 0.76rem;
+  color: #cbd5e0;
+  line-height: 1.4;
+}
+
+/* 职业道途分支按钮 */
+.subclass-btn {
+  background: rgba(30, 35, 48, 0.9);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  color: #e2e8f0;
+  font-size: 0.86rem;
+  transition: all 0.2s ease;
+}
+.subclass-btn:hover {
+  border-color: #d4af37;
+  color: #fff;
+}
+.subclass-btn.selected {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(30, 35, 48, 0.9));
+  border-color: #f6d365;
+  color: #f6d365;
+  font-weight: bold;
+}
+
 
 
 

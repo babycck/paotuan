@@ -56,12 +56,16 @@
           </div>
           <div class="profile-meta">
             <span id="char-race">人类</span> · 
-            <span id="char-class">战士</span> · 
+            <span id="char-class">战士</span> <span id="char-subclass" class="gold-text" style="font-weight:600;"></span> · 
             <span>等级 <strong id="char-level">1</strong></span> ·
             <span id="char-gender">男</span> (<span id="char-age">20</span>岁)
           </div>
-          <div class="token-box">
-            <span class="token-label">前世信物：</span>
+          <div class="profile-appearance" id="char-appearance-box" style="font-size: 0.78rem; color: #a0aec0; margin-top: 4px; line-height: 1.4;">
+            <span id="char-height-weight">178cm / 68kg</span> · <span id="char-build" style="color:#e2e8f0;">修长匀称</span>
+            <div id="char-looks-desc" style="color: #cbd5e0; margin-top: 2px;">墨发束冠，眼眸清朗，身着素青道袍</div>
+          </div>
+          <div class="token-box" style="margin-top: 6px;">
+            <span class="token-label">随身信物：</span>
             <span class="token-val" id="char-token">防风打火机</span>
           </div>
         </section>
@@ -522,25 +526,61 @@
           </div>
         </div>
 
-        <!-- Step 3: 问门派 (核心 11 大职业) -->
+        <!-- Step 3: 问门派与血脉道途 (核心 11 大职业) -->
         <div class="wizard-step-page" id="wizard-step-3">
           <div class="step-intro">
             <h3>【第三步 · 问门派】：仗剑走世，师承何流</h3>
-            <p>1 级生命自动取满额 HD，并初始化 BAB、优良豁免与本职技能：</p>
+            <p>挑选你的主修核心门派。1 级生命自动取满额 HD，并初始化正统开局兵甲与特性：</p>
           </div>
           <div class="class-cards-grid" id="class-cards-grid">
             <!-- 11 大核心职业卡片 -->
           </div>
+
+          <!-- 职业专属分支道途（若为术士选血脉，法师选学派，牧师选领域等） -->
+          <div class="wizard-subclass-section hidden" id="wizard-subclass-section" style="margin-top: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 12px 16px;">
+            <div id="wizard-subclass-header" style="font-weight: bold; color: #f6d365; margin-bottom: 8px;">★ 专属血脉/领域道途定夺：</div>
+            <div id="wizard-subclass-options" style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <!-- 动态装填选项 -->
+            </div>
+          </div>
         </div>
 
-        <!-- Step 4: 问背景特性与技能分配 -->
+        <!-- Step 4: 问天赋职业奖励、核心专长与技能分配 -->
         <div class="wizard-step-page" id="wizard-step-4">
           <div class="step-intro">
-            <h3>【第四步 · 问背景与绝活】：身世特性与技能分配</h3>
-            <p>挑选一项核心背景特性，并分配 1 级可用技能点（可用技能点：<strong id="wizard-skill-points-left" class="gold-text">4</strong> 点）：</p>
+            <h3>【第四步 · 问天赋、专长与绝活】：道骨铸炼</h3>
+            <p>选取天赋职业奖励、核心入门专长，并分发可用技能点：</p>
           </div>
-          <div class="trait-selection-box">
-            <label><strong>选择身世背景特性：</strong></label>
+
+          <!-- 4.1 CRB 核心天赋职业奖励 (FCB) -->
+          <div class="fcb-selection-box" style="background: rgba(20,24,35,0.85); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px;">
+            <div style="font-weight: bold; color: #f6d365; margin-bottom: 6px;">🎖️ CRB 核心天赋职业奖励 (每级自选其一)：</div>
+            <div style="display: flex; gap: 16px; font-size: 0.9rem;">
+              <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="wizard-fcb" value="hp" checked>
+                <span>💖 强化体魄 (永久获得 <strong>+1 点生命上限 HP</strong>)</span>
+              </label>
+              <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <input type="radio" name="wizard-fcb" value="skill">
+                <span>📚 勤勉研习 (永久获得 <strong>+1 点可用技能点</strong>)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4.2 CRB 核心开局专长挑选 -->
+          <div class="feat-selection-box" style="background: rgba(20,24,35,0.85); border: 1px solid rgba(212,175,55,0.3); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <div style="font-weight: bold; color: #f6d365;">⚔️ 挑选 1 级入门核心专长 (Feat)：</div>
+              <small id="feat-select-hint" style="color: #a0aec0;">已选 1 / 1 项 (人类特权可自选 2 项)</small>
+            </div>
+            <div class="feat-cards-grid" id="feat-cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;">
+              <!-- 动态装填猛力攻击、精通先攻、健壮、闪避、近距离射击、法术专攻等 -->
+            </div>
+          </div>
+
+          <!-- 4.3 身世背景特性 -->
+          <div class="trait-selection-box" style="margin-bottom: 12px;">
+            <label><strong>选择身世背景特性 (Trait)：</strong></label>
             <select id="wizard-trait-select" class="form-input">
               <option value="反制者">反制者 (幼时常受欺压但精于预见突袭，先攻检定获得 +2 背景加值)</option>
               <option value="老练佣兵">老练佣兵 (长年刀口舔血，意志豁免获得 +1 背景加值)</option>
@@ -548,22 +588,34 @@
               <option value="天生神力">天生神力 (体格雄壮，冲撞与摔绊 CMB 获得 +1 背景加值)</option>
             </select>
           </div>
-          <div class="wizard-skills-allocator" id="wizard-skills-allocator" style="margin-top: 14px;">
-            <!-- 技能点分配表格 -->
+
+          <!-- 4.4 全技能矩阵分配器 -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; margin-bottom: 8px;">
+            <div>
+              <strong>全量本职与探险技能点分配：</strong>
+              <span>剩余可用点数：<strong id="wizard-skill-points-left" class="gold-text">4</strong> 点</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-gold btn-small" id="btn-quick-alloc-skills">🌟 一键门派智能分配</button>
+              <button class="btn btn-silver btn-small" id="btn-reset-alloc-skills">🔄 重置</button>
+            </div>
+          </div>
+          <div class="wizard-skills-allocator" id="wizard-skills-allocator" style="max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 6px; padding: 6px 10px;">
+            <!-- 全量 22 项技能点分配行 -->
           </div>
         </div>
 
-        <!-- Step 5: 问信物与身世定魄 -->
+        <!-- Step 5: 问形相、身材体态与生平身世 -->
         <div class="wizard-step-page" id="wizard-step-5">
           <div class="step-intro">
-            <h3>【第五步 · 问身份】：定夺名号、形象与随身信物</h3>
-            <p>命盘已定，只欠人间印记。输入你的尊名名号、外貌年岁与随身佩带之珍视之物（选填）。</p>
+            <h3>【第五步 · 问形相与生平】：定制人貌外形与生平</h3>
+            <p>天地有相，人各有貌。输入你的尊名、形貌体态与生平（无论何种种族底模，在东方/现实题材下皆以纯正人类形相呈现）：</p>
           </div>
           <div class="finalize-form">
             <div class="form-group-row">
               <div class="form-group">
                 <label for="input-char-name">行者尊名：</label>
-                <input type="text" id="input-char-name" class="form-input" value="行者" placeholder="输入姓名、字号或道号">
+                <input type="text" id="input-char-name" class="form-input" value="行者" placeholder="输入姓名或尊号">
               </div>
               <div class="form-group">
                 <label for="input-char-gender">性别：</label>
@@ -574,14 +626,42 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="input-char-age">年龄：</label>
+                <label for="input-char-age">年岁：</label>
                 <input type="number" id="input-char-age" class="form-input" value="20" min="15" max="100">
               </div>
             </div>
-            <div class="form-group">
-              <label for="input-char-token">随身珍视之物 / 纪念道具（选填，亦可孑然一身）：</label>
-              <input type="text" id="input-char-token" class="form-input" value="家传断佩" placeholder="例如：家传断佩、生锈佛珠、烈酒葫芦，或填‘孑然一身，唯余长剑’">
+
+            <!-- 身高体重与形体 -->
+            <div class="form-group-row">
+              <div class="form-group">
+                <label for="input-char-height">身高 (cm)：</label>
+                <input type="number" id="input-char-height" class="form-input" value="178" min="100" max="240">
+              </div>
+              <div class="form-group">
+                <label for="input-char-weight">体重 (kg)：</label>
+                <input type="number" id="input-char-weight" class="form-input" value="68" min="30" max="200">
+              </div>
+              <div class="form-group">
+                <label for="input-char-build">体态身形：</label>
+                <input type="text" id="input-char-build" class="form-input" value="修长匀称" placeholder="例如：修长俊秀、魁梧健硕、娇柔轻盈、精壮干练">
+              </div>
             </div>
+
+            <div class="form-group">
+              <label for="input-char-looks">外貌形象与着装（发色、瞳色、面容疤痕、服饰风格）：</label>
+              <input type="text" id="input-char-looks" class="form-input" value="墨发束冠，眼眸清朗，面容端方沉静，身着素青道袍/常服" placeholder="描述你的外貌肖像，司命将据此临场描写 NPC 对你的第一印象">
+            </div>
+
+            <div class="form-group">
+              <label for="input-char-backstory">生平身世与初心经历（选填，三两句经历）：</label>
+              <input type="text" id="input-char-backstory" class="form-input" value="自幼寄人篱下磨砺心性，怀揣长辈遗愿踏入风云谜局，求索大道与身世真相。" placeholder="简述你的出身背景、因何踏入风云世间">
+            </div>
+
+            <div class="form-group">
+              <label for="input-char-token">随身信物 / 纪念道具（选填）：</label>
+              <input type="text" id="input-char-token" class="form-input" value="家传断佩" placeholder="例如：家传断佩、生锈佛珠、母亲留下的玉簪">
+            </div>
+
             <div class="preview-box" id="wizard-final-preview">
               <!-- 最终属性总结预览 -->
             </div>
@@ -872,6 +952,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_17"></script>
+  <script src="app.js?v=20261017_20"></script>
 </body>
 </html>
