@@ -8,7 +8,7 @@ import os
 import json
 import random
 from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -99,6 +99,12 @@ class ChatRequest(BaseModel):
 async def root_redirect():
     """根路径自动跳转至静态游戏主页"""
     return RedirectResponse(url="/static/index.html")
+
+
+@app.get("/favicon.ico")
+async def favicon_endpoint():
+    """消除浏览器默认请求网站图标的 404 报错"""
+    return Response(status_code=204)
 
 
 @app.get("/api/config")
