@@ -1288,3 +1288,197 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   新增：迭代建议录、门派契合推荐与单人生存锦囊样式
+   ========================================================= */
+
+/* 1. 底部建议勾选框 */
+.suggestion-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--gold-glow);
+  background: rgba(212, 175, 55, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px dashed var(--gold-dim);
+  transition: all 0.2s ease;
+}
+.suggestion-toggle-label:hover {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: var(--gold-glow);
+}
+.suggestion-toggle-label input[type="checkbox"] {
+  accent-color: var(--gold-primary);
+  cursor: pointer;
+}
+
+/* 2. 单人独行生存锦囊卡片 */
+.solo-survival-card {
+  background: rgba(20, 24, 30, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-left: 3px solid var(--gold-primary);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 12px 0 16px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.solo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.solo-card-header small {
+  color: var(--text-dim);
+}
+.solo-tips-list {
+  padding-left: 18px;
+  margin: 0;
+  color: #ddd;
+}
+.solo-tips-list code {
+  color: var(--gold-glow);
+  background: rgba(0,0,0,0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* 3. 司命星宿指路 · 门派契合推荐面板 */
+.class-recommend-panel {
+  background: linear-gradient(145deg, rgba(30, 24, 18, 0.9), rgba(18, 22, 28, 0.9));
+  border: 1px solid var(--gold-primary);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.2);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 14px 0;
+  animation: fadeIn 0.4s ease;
+}
+.recommend-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+.recommend-title-row h4 {
+  margin: 0;
+  color: var(--gold-glow);
+  font-size: 15px;
+}
+.recommend-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.recommend-card {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.25s ease;
+}
+.recommend-card:hover {
+  border-color: var(--gold-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.rec-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.rec-class-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: var(--gold-primary);
+}
+.rec-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(212, 175, 55, 0.2);
+  color: var(--gold-glow);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+.rec-reason {
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.rec-stats-preview {
+  font-size: 11px;
+  color: var(--gold-dim);
+  background: rgba(0,0,0,0.3);
+  padding: 6px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+.btn-apply-rec {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* 4. 司命心印中的建议列表样式 */
+.settings-suggestions-box {
+  margin-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 14px;
+}
+.sugg-actions {
+  display: flex;
+  gap: 8px;
+}
+.suggestions-hint {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin: 6px 0 10px 0;
+  line-height: 1.5;
+}
+.suggestions-list {
+  max-height: 160px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.suggestion-item {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid var(--gold-primary);
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sugg-time {
+  font-size: 10px;
+  color: var(--gold-dim);
+}
+.sugg-text {
+  color: #eee;
+  word-break: break-all;
+}
+.empty-tip {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px 0;
+}
+

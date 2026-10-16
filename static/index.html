@@ -281,8 +281,15 @@
       <!-- 底部自由自然语言输入舱（绝对杜绝 ABCD 选项） -->
       <footer class="narrative-input-box">
         <div class="input-prompt-label">
-          <span class="sparkle">✦</span>
-          <span>自由声明意图（开放自然语言，知难可变卦）：</span>
+          <div class="prompt-text-group">
+            <span class="sparkle">✦</span>
+            <span>自由声明意图（开放自然语言，知难可变卦）：</span>
+          </div>
+          <!-- 跑团迭代建议即时收录开关 -->
+          <label class="suggestion-toggle-label" title="勾选后点击发送，将作为迭代建议存入云端，不作为跑团动作推进剧情">
+            <input type="checkbox" id="chk-is-suggestion">
+            <span class="toggle-text">💡 记为迭代建议 (存入云端灵感录)</span>
+          </label>
         </div>
         <div class="input-form">
           <textarea 
@@ -292,7 +299,7 @@
             placeholder="打字声明你的意图（例如输入想玩的题材，或描写具体动作举止……按 Enter 发送）"
           ></textarea>
           <button id="btn-submit-action" class="btn btn-gold btn-send">
-            <span>执笔行念</span>
+            <span id="btn-send-label">执笔行念</span>
             <small>ENTER</small>
           </button>
         </div>
@@ -367,6 +374,30 @@
             <button class="btn btn-gold btn-large" id="btn-roll-4d6k3">
               🎲 天道摇骰 (一键摇取六维)
             </button>
+          </div>
+
+          <!-- 单人独行跑团避坑锦囊 -->
+          <div class="solo-survival-card">
+            <div class="solo-card-header">
+              <span class="gold-text">🛡️ 单人独行生存锦囊：</span>
+              <small>孤胆破局无队友援护，车卡立命需格外注重存活容错</small>
+            </div>
+            <ul class="solo-tips-list">
+              <li><strong>体质保命律</strong>：体质 (CON) 尽量不要低于 <code>12</code> 点，1级满额生命是抵御暗算暴击的最后护身符。</li>
+              <li><strong>自由点数池</strong>：摇出的 6 个数字无需绑死，只需把大点数给核心命脉，剩下 1~2 个低分哪怕是 7~8 也完全无伤大雅！</li>
+              <li><strong>单兵流派推荐</strong>：战系（战士/野蛮人/圣武士）重甲容错最高；游侠万金油带战宠；游荡者善匿机变。</li>
+            </ul>
+          </div>
+
+          <!-- 司命星宿指路：门派契合天梯榜 -->
+          <div class="class-recommend-panel hidden" id="class-recommend-panel">
+            <div class="recommend-title-row">
+              <h4>★ 司命星宿指路 · 门派契合推荐榜 ★</h4>
+              <span class="badge badge-gold">根据当前点数池深度诊断</span>
+            </div>
+            <div class="recommend-cards-container" id="recommend-cards-container">
+              <!-- 动态渲染 2~3 个最契合的职业及一键归位按钮 -->
+            </div>
           </div>
 
           <div class="ability-assignment-grid" id="ability-assignment-grid">
@@ -485,6 +516,21 @@
         <div class="form-group">
           <label for="cfg-extra-prompt">额外司命附加准则 (可选)：</label>
           <textarea id="cfg-extra-prompt" class="form-input" rows="3" placeholder="例如：增加更多悬疑暗黑江湖细节..."></textarea>
+        </div>
+
+        <!-- 跑团迭代建议录与一键复制面板 -->
+        <div class="settings-suggestions-box">
+          <div class="section-title-row">
+            <h4>💡 跑团迭代建议录 (云端暂存)</h4>
+            <div class="sugg-actions">
+              <button class="btn btn-silver btn-small" id="btn-copy-suggestions">📋 一键复制全部建议</button>
+              <button class="btn btn-danger btn-small" id="btn-clear-suggestions">🗑️ 清空建议</button>
+            </div>
+          </div>
+          <p class="suggestions-hint">在跑团时勾选输入框旁的【💡 记为迭代建议】即可实时收录。需要升级改版时，点击上方按钮一键复制全部建议，直接粘贴发给 AI 助手即可！</p>
+          <div class="suggestions-list scrollable" id="suggestions-list-box">
+            <div class="empty-tip">暂无暂存建议，在主界面输入框勾选【💡 记为迭代建议】即可随时收录。</div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

@@ -894,6 +894,7 @@ function initCharacterWizard() {
     }
     state.wizard.rolledScores = scores.sort((a, b) => b - a);
     renderAbilityAssignmentGrid();
+    renderClassRecommendations(state.wizard.rolledScores);
   };
 
   // 切换步骤
@@ -953,6 +954,118 @@ function showWizardStep(step) {
   if (step === 4) {
     renderSkillAllocator();
   }
+}
+
+// 核心门派点数池契合推荐规则表
+const CLASS_RECOMMEND_RULES = [
+  {
+    name: "战士",
+    tier: "S级 · 铁壁挥斩",
+    priority: ["STR", "CON", "DEX", "WIS", "INT", "CHA"],
+    reason: "高力量带来刀刀见血的近战挥斩，高体质筑牢1级气血壁垒；智力魅力仅8~10点完全无碍大局！"
+  },
+  {
+    name: "野蛮人",
+    tier: "S级 · 狂暴巨力",
+    priority: ["STR", "CON", "DEX", "WIS", "CHA", "INT"],
+    reason: "1级满额 12+体质点满血，狂暴战力全开，单人面对小怪围攻容错率极高！"
+  },
+  {
+    name: "圣武士",
+    tier: "S级 · 神圣独行",
+    priority: ["STR", "CHA", "CON", "WIS", "DEX", "INT"],
+    reason: "近战杀伐与魅力神恩全豁免加身，独行能抗能打能圣疗自保，单人无短板。"
+  },
+  {
+    name: "游侠",
+    tier: "A+级 · 荒野射手",
+    priority: ["DEX", "STR", "CON", "WIS", "INT", "CHA"],
+    reason: "高敏远距长弓狙杀避开肉搏反击，本职技能全面，荒野追踪与先攻优秀。"
+  },
+  {
+    name: "法师",
+    tier: "A级 · 奥术博学",
+    priority: ["INT", "DEX", "CON", "WIS", "CHA", "STR"],
+    reason: "最高大点直接给智力（决定法术环阶与豁免难度），敏体保命，力量仅8点无伤大雅。"
+  },
+  {
+    name: "游荡者",
+    tier: "A级 · 暗影巧手",
+    priority: ["DEX", "INT", "CON", "WIS", "CHA", "STR"],
+    reason: "敏捷决定先攻与闪避，智力提供海量技能点，借阴影暗算破局。"
+  },
+  {
+    name: "牧师",
+    tier: "A+级 · 神圣牧者",
+    priority: ["WIS", "CON", "CHA", "STR", "DEX", "INT"],
+    reason: "高感知决定神术环阶，引导神力群体治疗，重甲自保，单人稳健。"
+  }
+];
+
+function renderClassRecommendations(scores) {
+  const panel = document.getElementById("class-recommend-panel");
+  const container = document.getElementById("recommend-cards-container");
+  if (!panel || !container || !scores || scores.length < 6) return;
+
+  panel.classList.remove("hidden");
+  container.innerHTML = "";
+
+  const sorted = [...scores].sort((a, b) => b - a);
+  const topClasses = [];
+
+  if (sorted[0] >= 14 && sorted[1] >= 13) {
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "战士"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "野蛮人"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "圣武士"));
+  } else if (sorted[0] >= 15) {
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "法师"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游侠"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游荡者"));
+  } else {
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "战士"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "游侠"));
+    topClasses.push(CLASS_RECOMMEND_RULES.find(c => c.name === "牧师"));
+  }
+
+  topClasses.filter(Boolean).forEach(cls => {
+    const card = document.createElement("div");
+    card.className = "recommend-card";
+
+    const plan = {};
+    cls.priority.forEach((attr, idx) => {
+      plan[attr] = sorted[idx];
+    });
+
+    card.innerHTML = `
+      <div class="rec-card-top">
+        <span class="rec-class-name">门派：${cls.name}</span>
+        <span class="rec-badge">${cls.tier}</span>
+      </div>
+      <div class="rec-reason">${cls.reason}</div>
+      <div class="rec-stats-preview">
+        <strong>最优配点：</strong>力量 ${plan.STR} / 敏捷 ${plan.DEX} / 体质 ${plan.CON} / 智力 ${plan.INT} / 感知 ${plan.WIS} / 魅力 ${plan.CHA}
+      </div>
+      <button class="btn btn-gold btn-apply-rec">★ 采纳此门派并一键归位</button>
+    `;
+
+    card.querySelector(".btn-apply-rec").onclick = () => {
+      state.wizard.assignedAbilities = { ...plan };
+      state.wizard.selectedClass = cls.name;
+
+      Object.keys(plan).forEach(attrCode => {
+        const sel = document.querySelector(`.slot-select[data-attr="${attrCode}"]`);
+        if (sel) sel.value = plan[attrCode];
+        const valElem = document.getElementById(`slot-val-${attrCode}`);
+        if (valElem) valElem.textContent = plan[attrCode];
+      });
+
+      renderClassCards();
+      audio.playAlert();
+      alert(`已成功采纳【${cls.name}】最优属性规划！六维点数已一键归位，门派已自动选定为【${cls.name}】。点击【下一步】即可继续定制血脉与绝活！`);
+    };
+
+    container.appendChild(card);
+  });
 }
 
 function renderAbilityAssignmentGrid() {
@@ -1274,15 +1387,44 @@ function finalizeCharacterCreation() {
 // 9. API 设置与存档管理 (Settings & Persistence)
 // =========================================================
 
+async function loadAndRenderSuggestions() {
+  const box = document.getElementById("suggestions-list-box");
+  if (!box) return;
+  try {
+    const res = await fetch("/api/suggestions");
+    const json = await res.json();
+    const list = json.suggestions || [];
+    if (list.length === 0) {
+      box.innerHTML = `<div class="empty-tip">暂无暂存建议，在主界面输入框勾选【💡 记为迭代建议】即可随时收录。</div>`;
+      return;
+    }
+    box.innerHTML = "";
+    list.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "suggestion-item";
+      el.innerHTML = `
+        <span class="sugg-time">[${item.time}]</span>
+        <span class="sugg-text">${item.content}</span>
+      `;
+      box.appendChild(el);
+    });
+  } catch (e) {
+    box.innerHTML = `<div class="danger-text">读取建议失败: ${e.message}</div>`;
+  }
+}
+
 function initSettingsModal() {
   const modal = document.getElementById("modal-settings");
   const btnOpen = document.getElementById("btn-open-settings");
   const btnClose = document.getElementById("btn-close-settings");
   const btnSave = document.getElementById("btn-save-settings");
   const btnTest = document.getElementById("btn-test-api");
+  const btnCopySugg = document.getElementById("btn-copy-suggestions");
+  const btnClearSugg = document.getElementById("btn-clear-suggestions");
 
   btnOpen.onclick = async () => {
     modal.classList.remove("hidden");
+    loadAndRenderSuggestions();
     try {
       const res = await fetch("/api/config");
       const data = await res.json();
@@ -1339,6 +1481,41 @@ function initSettingsModal() {
       btnTest.textContent = "🔗 连通性测试";
     }
   };
+
+  if (btnCopySugg) {
+    btnCopySugg.onclick = async () => {
+      try {
+        const res = await fetch("/api/suggestions");
+        const json = await res.json();
+        const list = json.suggestions || [];
+        if (list.length === 0) {
+          alert("当前暂无暂存建议可供复制。");
+          return;
+        }
+        let formatted = "### 跑团迭代建议清单 (来自玩家实测灵感)：\n\n";
+        list.forEach((item, idx) => {
+          formatted += `${idx + 1}. [${item.time}] ${item.content}\n`;
+        });
+        await navigator.clipboard.writeText(formatted);
+        alert("【建议已复制到剪贴板】！\n您可以直接在当前与 AI 助手的对话框中按 Ctrl+V 粘贴发给 Antigravity，开始下一轮系统升级！");
+      } catch (e) {
+        alert("复制失败: " + e.message);
+      }
+    };
+  }
+
+  if (btnClearSugg) {
+    btnClearSugg.onclick = async () => {
+      if (!confirm("确定要清空所有已暂存的建议吗？")) return;
+      try {
+        await fetch("/api/suggestions", { method: "DELETE" });
+        loadAndRenderSuggestions();
+        alert("建议灵感录已清空。");
+      } catch (e) {
+        alert("清空失败: " + e.message);
+      }
+    };
+  }
 }
 
 async function saveGameToServer() {
@@ -1417,13 +1594,46 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnCloseLeft) btnCloseLeft.onclick = () => leftPanel.classList.remove("open");
   if (btnCloseRight) btnCloseRight.onclick = () => rightPanel.classList.remove("open");
 
-  // 4. 行动声明发送逻辑 (Enter 发送, Shift+Enter 换行)
+  // 4. 行动声明发送逻辑 (Enter 发送, Shift+Enter 换行) 与 建议即时收录
   const inputAction = document.getElementById("input-action");
   const btnSubmitAction = document.getElementById("btn-submit-action");
+  const chkSuggestion = document.getElementById("chk-is-suggestion");
+  const btnSendLabel = document.getElementById("btn-send-label");
 
-  function triggerSubmit() {
+  if (chkSuggestion && btnSendLabel) {
+    chkSuggestion.onchange = () => {
+      btnSendLabel.textContent = chkSuggestion.checked ? "记录建议" : "执笔行念";
+    };
+  }
+
+  async function triggerSubmit() {
     const text = inputAction.value.trim();
     if (!text) return;
+
+    // 判定是否勾选了“记为迭代建议”
+    if (chkSuggestion && chkSuggestion.checked) {
+      inputAction.value = "";
+      chkSuggestion.checked = false;
+      if (btnSendLabel) btnSendLabel.textContent = "执笔行念";
+
+      try {
+        const res = await fetch("/api/suggestions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: text })
+        });
+        if (res.ok) {
+          audio.playAlert();
+          appendNarrativeEntry("assistant", `【司命灵感阁 · 建议收录】：已将您的迭代建议“${text}”收录至云端！此建议不会推进当前跑团剧情。您可随时在右上角【⚙️ 司命心印】中一键复制全部建议，直接发给 AI 助手协助代码升级。`);
+        } else {
+          alert("建议暂存失败，请检查网络或后端。");
+        }
+      } catch (err) {
+        alert("建议存入异常: " + err.message);
+      }
+      return;
+    }
+
     inputAction.value = "";
     sendPlayerAction(text);
   }

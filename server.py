@@ -165,6 +165,62 @@ async def load_game_endpoint(filename: str = "default_save.json"):
     return {"status": "ok", "data": data}
 
 
+class SuggestionRequest(BaseModel):
+    content: str
+
+
+SUGGESTIONS_FILE = os.path.join(SAVES_DIR, "suggestions.json")
+
+
+def load_suggestions() -> List[Dict[str, Any]]:
+    """加载暂存的玩家迭代建议"""
+    if not os.path.exists(SUGGESTIONS_FILE):
+        return []
+    try:
+        with open(SUGGESTIONS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_suggestions(data: List[Dict[str, Any]]):
+    """保存玩家迭代建议"""
+    with open(SUGGESTIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+@app.get("/api/suggestions")
+async def get_suggestions_endpoint():
+    """获取所有暂存的迭代建议"""
+    return {"status": "ok", "suggestions": load_suggestions()}
+
+
+@app.post("/api/suggestions")
+async def add_suggestion_endpoint(req: SuggestionRequest):
+    """追加一条新的迭代建议"""
+    content = req.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="建议内容不可为空")
+    items = load_suggestions()
+    import datetime
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    item = {
+        "id": len(items) + 1,
+        "time": now_str,
+        "content": content
+    }
+    items.append(item)
+    save_suggestions(items)
+    return {"status": "ok", "message": "建议已成功存入云端灵感录", "item": item}
+
+
+@app.delete("/api/suggestions")
+async def clear_suggestions_endpoint():
+    """清空迭代建议"""
+    save_suggestions([])
+    return {"status": "ok", "message": "建议灵感录已清空"}
+
+
 @app.post("/api/roll")
 async def roll_dice_endpoint(req: DiceRollRequest):
     """
@@ -217,14 +273,18 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
 ```
 
 【核心工作流三阶段总纲】：
-阶段一：【遵守《Pathfinder v2.01简体》的问询式车卡】
+阶段一：【遵守《Pathfinder v2.01简体》的问询式车卡与单人独行智能导师】
 若玩家尚未定夺完整人物卡（或正在车卡交流）：
-你须以沉稳古雅、严谨精确的口吻，严格遵守《Pathfinder v2.01简体》规则体系，通过逐步问询引导玩家车卡：
-1. 问天命六维：指导以 4d6k3（4d6 剔除最低 1 枚）摇骰并归位力量 (STR)、敏捷 (DEX)、体质 (CON)、智力 (INT)、感知 (WIS)、魅力 (CHA)，准确推导修正值。
-2. 问天生血脉：从核心7族（人类、矮人、精灵、侏儒、半身人、半精灵、半兽人）中选择，应用精准属性修正与种族特性（体型、移速、视觉等）。
-3. 问仗剑门派：从11大核心职业（野蛮人、吟游诗人、牧师、德鲁伊、战士、武僧、圣武士、游侠、游荡者、术士、法师）中选择，按1级满额HD配置HP、满/中/慢BAB、优良豁免与本职技能。
-4. 问身世绝活：挑选身世背景特性（如反制者：先攻+2；老练佣兵：意志+1等），配置入门专长（如猛力攻击），分配1级技能点并核算本职+3胜任加值与防具检定减值 (ACP)。
+你须以沉稳古雅、严谨精确且充满贴心引导的口吻，严格遵守《Pathfinder v2.01简体》规则体系，通过逐步问询引导玩家车卡：
+1. 问天命六维（点数池自由分配与门派契合推荐）：
+   - 指导以 4d6k3 摇出 6 个数字（例如 16, 14, 13, 12, 10, 8）。
+   - ★核心导师法则★：这 6 个数字是“点数池”，绝非一开始绑死属性！当玩家给出点数后，司命须主动以懂行导师身份，分析高低分布并推荐 2~3 个最契合的职业流派（如：近战流派主力量/体质，法系主智力/敏捷，圣职主感知/体质等），明确告知玩家：将高分分配给立身命脉属性，剩下 1~2 个低分作为废属性（Dump Stat）偏低完全无伤大雅，丝毫不影响人物战力与扮演风骨！
+   - 提供单人跑团生存建议：单人独行务必保证体质 (CON) 不低于 12（保命底线），战系（战士/野蛮人/圣武士）容错最高，游侠万金油，游荡者重机变。
+2. 问天生血脉：从核心7族（人类、矮人、精灵、侏儒、半身人、半精灵、半兽人）中选择，提示半兽人【兽人坚韧】（负血拼死一搏，单人免死金牌）与人类【额外专长与技能点】的高容错优势，应用精准属性修正。
+3. 问仗剑门派：从11大核心职业中选择，按1级满额HD配置HP、满/中/慢BAB、优良豁免与本职技能。
+4. 问身世绝活：推荐单人核心背景特性（如【反制者】：先攻+2，单人独行先手决定生死；【老练佣兵】：意志+1，防催眠心控），配置入门专长（如猛力攻击），分配技能点时重点提醒单人必备四大生存技能（★察觉、★隐匿、★特技、★唬骗/交涉）。
 5. 问信物定魄：定夺名号尊称、性别年龄、形象外貌与前尘携带之信物道具。
+若玩家提出“帮我配一个能打又能抗的”等口语化请求，司命应秒懂并直接给出最优配置方案供玩家确认！
 每次提问务必克制聚焦，待玩家回应后再推进，直至命契圆满。
 
 阶段二：【故事题材定位与开局切入点三分支（★全篇唯此一处提供选项★）】
