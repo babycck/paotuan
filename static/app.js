@@ -772,13 +772,17 @@ async function sendPlayerAction(actionText) {
 
   const rawText = actionText.trim();
 
-  // 若战役尚未定夺题材且输入为纯自然语言，定夺当前题材
-  if (!state.theme && !rawText.startsWith("【") && !rawText.startsWith("我拔出")) {
+  // 若战役尚未正式选定切入点分支（未正式开幕），允许自由更新与覆盖题材
+  const isBranchChoice = ["分支一", "分支二", "分支三", "分支四"].some(b => rawText.includes(b));
+  if (!state.hasStartedFirstAct && !isBranchChoice && !rawText.startsWith("【")) {
     state.theme = rawText;
     const subTitleElem = document.getElementById("campaign-theme-subtitle");
-    if (subTitleElem) subTitleElem.textContent = `${state.theme} · Pathfinder 1e 叙事引擎`;
+    if (subTitleElem) subTitleElem.textContent = `${state.theme} · 全题材叙事引擎`;
     const themeDescElem = document.getElementById("current-theme-desc");
     if (themeDescElem) themeDescElem.textContent = state.theme;
+  }
+  if (isBranchChoice) {
+    state.hasStartedFirstAct = true;
   }
 
   // 呈现玩家行动
@@ -847,8 +851,20 @@ async function sendPlayerAction(actionText) {
       }
     }
 
-    // 后处理：解析索骰指令
-    const cleanFinalText = parseAndHandleCheckDirective(accumulatedText);
+    // 后处理：解析主线任务指令与索骰指令
+    let processedText = accumulatedText;
+    const questMatch = processedText.match(/\[QUEST:\s*([^\]]+)\]/i);
+    if (questMatch) {
+      const questContent = questMatch[1].trim();
+      state.quest = questContent;
+      const themeDescElem = document.getElementById("current-theme-desc");
+      if (themeDescElem) {
+        themeDescElem.innerHTML = `<strong>【核心使命/主线】：</strong>${questContent}`;
+      }
+      processedText = processedText.replace(questMatch[0], "").trim();
+    }
+
+    const cleanFinalText = parseAndHandleCheckDirective(processedText);
     contentElem.innerHTML = cleanFinalText
       .replace(/\n\n/g, "</p><p>")
       .replace(/\n/g, "<br>");
@@ -1429,8 +1445,11 @@ function initSettingsModal() {
     try {
       const res = await fetch("/api/config");
       const data = await res.json();
+      const localKey = localStorage.getItem("paotuan_deepseek_key");
       if (data.masked_api_key) {
         document.getElementById("cfg-api-key").placeholder = `已配置 (${data.masked_api_key})，留空则不修改`;
+      } else if (localKey) {
+        document.getElementById("cfg-api-key").value = localKey;
       }
       document.getElementById("cfg-base-url").value = data.base_url || "https://api.deepseek.com";
       document.getElementById("cfg-model").value = data.model || "deepseek-flash";
@@ -1451,7 +1470,10 @@ function initSettingsModal() {
       model: model,
       system_prompt_extra: extra
     };
-    if (key) payload.api_key = key;
+    if (key) {
+      payload.api_key = key;
+      localStorage.setItem("paotuan_deepseek_key", key);
+    }
 
     try {
       await fetch("/api/config", {
@@ -1459,7 +1481,7 @@ function initSettingsModal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      alert("司命心印设置保存成功！");
+      alert("司命心印设置保存成功！API 密钥已双重永久锁定。");
       modal.classList.add("hidden");
     } catch (e) {
       alert("保存失败：" + e.message);
@@ -1727,4 +1749,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 尝试拉取历史存档
   loadGameFromServer();
+
+  // 9. API Key 双保险静默同步：若本地有 Key 且后端未配置，自动静默同步补全
+  (async () => {
+    try {
+      const localKey = localStorage.getItem("paotuan_deepseek_key");
+      if (localKey) {
+        const res = await fetch("/api/config");
+        const data = await res.json();
+        if (!data.has_api_key) {
+          await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ api_key: localKey })
+          });
+        }
+      }
+    } catch (e) {}
+  })();
 });
