@@ -592,96 +592,215 @@ function renderTacticalPanel() {
 
 
 // =========================================================
-// 5. 索骰/变卦双轨拦截器 (Regex & Check Mechanics)
+// =========================================================
+// 5. 索骰/变卦双轨拦截器 (Regex & Natural Language Fallback)
 // =========================================================
 
-// 正则式：捕获 [CHECK: 检定名称 | DC: 数值 | REASON: 判据]
-const CHECK_REGEX = /\[CHECK:\s*([^\|]+)\s*\|\s*DC:\s*(\d+)\s*\|\s*REASON:\s*([^\]]+)\]/i;
+// 容错暗号正则：支持冒号(中英文)、竖线(中英文)、加粗星号、缺少REASON
+const FLEXIBLE_CHECK_REGEX = /(?:\*{1,2})?\[\s*CHECK\s*[:：]\s*([^\|｜]+?)\s*[\|｜]\s*DC\s*[:：]\s*(\d+)(?:\s*[\|｜]\s*REASON\s*[:：]\s*([^\]]+))?\s*\](?:\*{1,2})?/i;
 
+// 常见检定与豁免判据关键词表
+const KNOWN_CHECK_KEYWORDS = [
+  "强韧", "反射", "意志",
+  "先攻", "CMB", "CMD", "战系机动", "冲撞", "摔绊", "擒抱", "卸除武器",
+  "察觉", "隐匿", "交涉", "欺骗", "威吓", "察言观色", "解除装置", "手上功夫",
+  "杂技", "攀爬", "游泳", "脱逃", "飞行", "骑术", "医疗", "生存", "法术辨识",
+  "估价", "易容", "语言学", "表演", "专业",
+  "知识(神秘)", "知识(地下城)", "知识(自然)", "知识(宗教)", "知识(地方)", "知识(历史)", "知识(位面)", "知识(贵族)", "知识(工程)", "知识(地理)",
+  "神秘知识", "地下城知识", "自然知识", "宗教知识", "地方知识", "历史知识",
+  "攻击", "挥斩", "命中", "近战", "射击",
+  "力量", "敏捷", "体质", "智力", "感知", "魅力"
+];
+
+// 自然语言语义保底扫描器：当大模型漏掉 [CHECK: ...] 时，自动从文本中提取检定名目与难度
+function scanNaturalLanguageForCheck(text) {
+  if (!text) return null;
+
+  // 1. 优先扫描明确技能/豁免名目：例如“请进行一次【隐匿】检定(DC 12)”、“需要进行强韧豁免”
+  for (const name of KNOWN_CHECK_KEYWORDS) {
+    const pattern = new RegExp(`(?:请|需|需要|进行|尝试|做一次|投掷|掷一次|来一次|通过)?[^。！？\n]{0,12}?(?:【|“|")?(${name})(?:】|”|")?[^。！？\n]{0,8}?(?:检定|豁免|判定)`, "i");
+    const m = text.match(pattern);
+    if (m) {
+      const checkType = m[1];
+      // 提取同一文本中的 DC 难度数值
+      const dcMatch = text.match(/(?:DC|难度|目标)\s*[:：为是]?\s*(\d+)/i);
+      const dc = dcMatch ? parseInt(dcMatch[1], 10) : 12; // 默认 PF1e 1级常规标准难度 DC 12
+      return {
+        type: checkType,
+        dc: dc,
+        reason: `剧情推演要求通过【${checkType}】判定`
+      };
+    }
+  }
+
+  // 2. 泛化保底：文本中明确出现了“请投骰”或“需要进行检定”
+  const genericMatch = text.match(/(?:请|需要|进行|尝试|通过)[^。！？\n]{0,12}?(?:检定|豁免|投骰)(?:[，,\s]*(?:DC|难度)\s*[:：]?\s*(\d+))?/i);
+  if (genericMatch) {
+    const dc = genericMatch[1] ? parseInt(genericMatch[1], 10) : 12;
+    return {
+      type: "命途机缘",
+      dc: dc,
+      reason: "司命要求进行临场天数裁定"
+    };
+  }
+
+  return null;
+}
+
+// 全面核算角色在此项检定中的总加值与加减值明细 (含穿甲减值 ACP、本职+3、特征)
+function getCheckBonusDetail(checkType) {
+  const c = state.character;
+  if (!c) {
+    return { bonus: 0, detail: "未构建人物卡 (修正 0)" };
+  }
+
+  const norm = (checkType || "").toLowerCase();
+
+  // 1. 先攻判定
+  if (norm.includes("先攻") || norm.includes("init")) {
+    const dexMod = calcMod(c.abilities.DEX);
+    const traitBonus = (c.trait && c.trait.type === "init") ? c.trait.bonus : 0;
+    const total = c.initiative ?? (dexMod + traitBonus);
+    const parts = [`敏捷修正(${fmtMod(dexMod)})`];
+    if (traitBonus) parts.push(`命格特质(${fmtMod(traitBonus)})`);
+    return { bonus: total, detail: parts.join(" + ") };
+  }
+
+  // 2. 战系机动 (CMB / CMD)
+  if (norm.includes("cmb") || norm.includes("战系机动") || norm.includes("冲撞") || norm.includes("摔绊") || norm.includes("擒抱") || norm.includes("卸除武器")) {
+    const bab = c.bab || 0;
+    const strMod = calcMod(c.abilities.STR);
+    const traitBonus = (c.trait && c.trait.type === "cmb") ? c.trait.bonus : 0;
+    const total = c.cmb ?? (bab + strMod + traitBonus);
+    return { bonus: total, detail: `BAB(${bab}) + 力量(${fmtMod(strMod)})` + (traitBonus ? ` + 特质(${fmtMod(traitBonus)})` : "") };
+  }
+  if (norm.includes("cmd") || norm.includes("机动防御")) {
+    const bab = c.bab || 0;
+    const strMod = calcMod(c.abilities.STR);
+    const dexMod = calcMod(c.abilities.DEX);
+    const total = c.cmd ?? (10 + bab + strMod + dexMod);
+    return { bonus: total, detail: `基准(10) + BAB(${bab}) + 力量(${fmtMod(strMod)}) + 敏捷(${fmtMod(dexMod)})` };
+  }
+
+  // 3. 豁免判定
+  if (norm.includes("强韧")) {
+    const total = c.saves.fort || 0;
+    const conMod = calcMod(c.abilities.CON);
+    const baseFort = total - conMod;
+    return { bonus: total, detail: `体质修正(${fmtMod(conMod)}) + 职业基础强韧(${baseFort >= 0 ? '+' + baseFort : baseFort})` };
+  }
+  if (norm.includes("反射")) {
+    const total = c.saves.ref || 0;
+    const dexMod = calcMod(c.abilities.DEX);
+    const baseRef = total - dexMod;
+    return { bonus: total, detail: `敏捷修正(${fmtMod(dexMod)}) + 职业基础反射(${baseRef >= 0 ? '+' + baseRef : baseRef})` };
+  }
+  if (norm.includes("意志")) {
+    const total = c.saves.will || 0;
+    const wisMod = calcMod(c.abilities.WIS);
+    const baseWill = total - wisMod;
+    return { bonus: total, detail: `感知修正(${fmtMod(wisMod)}) + 职业基础意志(${baseWill >= 0 ? '+' + baseWill : baseWill})` };
+  }
+
+  // 4. 技能判定 (精准映射 35 项 PF1e 技能及其日常俗称)
+  for (const skName of Object.keys(c.skills)) {
+    const skLower = skName.toLowerCase();
+    const isMatched = norm.includes(skLower) || 
+      (skName === "察觉" && (norm.includes("侦查") || norm.includes("聆听") || norm.includes("观察") || norm.includes("寻找"))) ||
+      (skName === "隐匿" && (norm.includes("潜行") || norm.includes("躲藏") || norm.includes("匿踪"))) ||
+      (skName === "解除装置" && (norm.includes("开锁") || norm.includes("拆除陷阱") || norm.includes("排险"))) ||
+      (skName === "察言观色" && (norm.includes("识破") || norm.includes("洞察") || norm.includes("读心"))) ||
+      (skName === "交涉" && (norm.includes("说服") || norm.includes("谈判") || norm.includes("安抚"))) ||
+      (skName === "欺骗" && (norm.includes("谎言") || norm.includes("诳骗") || norm.includes("伪装"))) ||
+      (skName === "威吓" && (norm.includes("恐吓") || norm.includes("震慑"))) ||
+      (skName === "手上功夫" && (norm.includes("扒窃") || norm.includes("藏匿") || norm.includes("戏法")));
+
+    if (isMatched) {
+      const sk = c.skills[skName];
+      const attrMod = calcMod(c.abilities[sk.attr] || 10);
+      const ranks = sk.ranks || 0;
+      let isClass = sk.isClass;
+      let traitBonus = 0;
+      if (skName === "察觉" && c.trait && c.trait.type === "perception") {
+        isClass = true;
+        traitBonus = 1;
+      }
+      const classBonus = (isClass && ranks > 0) ? 3 : 0;
+      
+      const skDef = PF1E_RULES.skills.find(s => s.name === skName);
+      const acpPenalty = (skDef && skDef.acp) ? (c.ac.acp || 0) : 0;
+      
+      const total = attrMod + ranks + classBonus + traitBonus + acpPenalty;
+      const parts = [`${sk.attr}修正(${fmtMod(attrMod)})`];
+      if (ranks > 0) parts.push(`技能点(${ranks})`);
+      if (classBonus > 0) parts.push(`本职专修(+3)`);
+      if (traitBonus > 0) parts.push(`特质加成(+${traitBonus})`);
+      if (acpPenalty !== 0) parts.push(`穿甲减值(${acpPenalty})`);
+
+      return { bonus: total, detail: parts.join(" + ") };
+    }
+  }
+
+  // 5. 六维纯属性调整值判定
+  if (norm.includes("力量")) return { bonus: calcMod(c.abilities.STR), detail: `力量调整值(${fmtMod(calcMod(c.abilities.STR))})` };
+  if (norm.includes("敏捷")) return { bonus: calcMod(c.abilities.DEX), detail: `敏捷调整值(${fmtMod(calcMod(c.abilities.DEX))})` };
+  if (norm.includes("体质")) return { bonus: calcMod(c.abilities.CON), detail: `体质调整值(${fmtMod(calcMod(c.abilities.CON))})` };
+  if (norm.includes("智力")) return { bonus: calcMod(c.abilities.INT), detail: `智力调整值(${fmtMod(calcMod(c.abilities.INT))})` };
+  if (norm.includes("感知")) return { bonus: calcMod(c.abilities.WIS), detail: `感知调整值(${fmtMod(calcMod(c.abilities.WIS))})` };
+  if (norm.includes("魅力")) return { bonus: calcMod(c.abilities.CHA), detail: `魅力调整值(${fmtMod(calcMod(c.abilities.CHA))})` };
+
+  // 6. 兵刃近战与远程攻击判定
+  if (norm.includes("攻击") || norm.includes("挥斩") || norm.includes("命中") || norm.includes("近战") || norm.includes("射击")) {
+    const atk = c.weapon.attackBonus || 0;
+    return { bonus: atk, detail: `BAB(${c.bab}) + 力量/敏捷修正 + 兵刃特性 = ${fmtMod(atk)}` };
+  }
+
+  return { bonus: 0, detail: "纯运机缘 (修正 0)" };
+}
+
+// 智能核算角色在此项检定中的总加值
+function computePlayerBonusForCheck(checkType) {
+  return getCheckBonusDetail(checkType).bonus;
+}
+
+// 索骰指令解析器（双轨：机器标记优先，自然语言保底）
 function parseAndHandleCheckDirective(rawText) {
-  const match = rawText.match(CHECK_REGEX);
+  let matchedCheck = null;
+  let cleanText = rawText;
+
+  // 1. 尝试结构化机器标记匹配
+  const match = rawText.match(FLEXIBLE_CHECK_REGEX);
   if (match) {
-    const checkType = match[1].trim();
-    const dcValue = parseInt(match[2].trim(), 10);
-    const reasonText = match[3].trim();
+    matchedCheck = {
+      type: match[1].trim(),
+      dc: parseInt(match[2].trim(), 10),
+      reason: match[3] ? match[3].trim() : "剧情临场推演"
+    };
+    cleanText = rawText.replace(match[0], "").trim();
+  } else {
+    // 2. 结构化标记缺失时：启动自然语言语义保底扫描器
+    const naturalFound = scanNaturalLanguageForCheck(rawText);
+    if (naturalFound) {
+      matchedCheck = naturalFound;
+    }
+  }
 
-    // 剔除机器标记，呈现纯净剧情
-    const cleanText = rawText.replace(match[0], "").trim();
-
-    // 计算角色对应的修正值
-    const bonus = computePlayerBonusForCheck(checkType);
-
+  if (matchedCheck) {
+    const bonusInfo = getCheckBonusDetail(matchedCheck.type);
     state.pendingCheck = {
-      type: checkType,
-      dc: dcValue,
-      reason: reasonText,
-      bonus: bonus
+      type: matchedCheck.type,
+      dc: matchedCheck.dc,
+      reason: matchedCheck.reason,
+      bonus: bonusInfo.bonus,
+      bonusDetail: bonusInfo.detail
     };
 
     // 呼出金色脉冲横幅
     showPendingCheckBanner(state.pendingCheck);
     audio.playAlert();
-
-    return cleanText;
-  }
-  return rawText;
-}
-
-// 智能核算角色在此项检定中的总加值
-function computePlayerBonusForCheck(checkType) {
-  const c = state.character;
-  if (!c) return 0;
-
-  // 1. 先攻判定
-  if (checkType.includes("先攻") || checkType.toLowerCase().includes("init")) {
-    return c.initiative ?? (calcMod(c.abilities.DEX) + (c.trait && c.trait.type === "init" ? c.trait.bonus : 0));
   }
 
-  // 2. 战系机动 (CMB / CMD) 判定
-  if (checkType.includes("CMB") || checkType.includes("战系机动") || checkType.includes("冲撞") || checkType.includes("摔绊") || checkType.includes("擒抱") || checkType.includes("卸除武器")) {
-    return c.cmb ?? (c.bab + calcMod(c.abilities.STR) + (c.trait && c.trait.type === "cmb" ? c.trait.bonus : 0));
-  }
-  if (checkType.includes("CMD") || checkType.includes("机动防御")) {
-    return c.cmd ?? (10 + c.bab + calcMod(c.abilities.STR) + calcMod(c.abilities.DEX));
-  }
-
-  // 3. 豁免判定
-  if (checkType.includes("强韧")) return c.saves.fort || 0;
-  if (checkType.includes("反射")) return c.saves.ref || 0;
-  if (checkType.includes("意志")) return c.saves.will || 0;
-
-  // 4. 技能判定
-  for (const skName of Object.keys(c.skills)) {
-    if (checkType.includes(skName)) {
-      const sk = c.skills[skName];
-      const attrMod = calcMod(c.abilities[sk.attr] || 10);
-      let total = attrMod + (sk.ranks || 0);
-      let isClass = sk.isClass;
-      if (skName === "察觉" && c.trait && c.trait.type === "perception") {
-        isClass = true;
-        total += 1;
-      }
-      if (isClass && sk.ranks > 0) total += 3;
-      const skDef = PF1E_RULES.skills.find(s => s.name === skName);
-      if (skDef && skDef.acp) total += (c.ac.acp || 0);
-      return total;
-    }
-  }
-
-  // 5. 基础属性判定
-  if (checkType.includes("力量")) return calcMod(c.abilities.STR);
-  if (checkType.includes("敏捷")) return calcMod(c.abilities.DEX);
-  if (checkType.includes("体质")) return calcMod(c.abilities.CON);
-  if (checkType.includes("智力")) return calcMod(c.abilities.INT);
-  if (checkType.includes("感知")) return calcMod(c.abilities.WIS);
-  if (checkType.includes("魅力")) return calcMod(c.abilities.CHA);
-
-  // 6. 近战命中判定
-  if (checkType.includes("攻击") || checkType.includes("挥斩") || checkType.includes("命中") || checkType.includes("近战")) {
-    return c.weapon.attackBonus || 0;
-  }
-
-  return 0;
+  return cleanText;
 }
 
 function showPendingCheckBanner(check) {
@@ -690,6 +809,12 @@ function showPendingCheckBanner(check) {
   document.getElementById("check-dc-value").textContent = check.dc;
   document.getElementById("check-reason-text").textContent = `判据：${check.reason}`;
   document.getElementById("check-bonus-preview").textContent = fmtMod(check.bonus);
+
+  const detailElem = document.getElementById("check-bonus-detail");
+  if (detailElem) {
+    detailElem.textContent = `加值核算：${check.bonusDetail || '属性与专修修正'} (总计 ${fmtMod(check.bonus)})`;
+  }
+
   banner.classList.remove("hidden");
 }
 
@@ -2428,7 +2553,154 @@ function initNewStoryButton() {
 
 
 // =========================================================
-// 12. 事件绑定与初始化启动
+// 12. 自主掷骰 · 命途加值自选台 (Manual Roll Controller)
+// =========================================================
+
+function initManualRollModal() {
+  const modal = document.getElementById("modal-manual-roll");
+  const btnOpen = document.getElementById("btn-open-manual-roll");
+  const btnClose = document.getElementById("btn-close-manual-roll");
+  const btnCancel = document.getElementById("btn-cancel-manual-roll");
+
+  if (!modal || !btnOpen) return;
+
+  btnOpen.onclick = () => {
+    renderManualRollGrid();
+    modal.classList.remove("hidden");
+  };
+
+  const closeModal = () => modal.classList.add("hidden");
+  if (btnClose) btnClose.onclick = closeModal;
+  if (btnCancel) btnCancel.onclick = closeModal;
+}
+
+function renderManualRollGrid() {
+  const c = state.character;
+  if (!c) return;
+
+  // 1. 三大豁免
+  const savesContainer = document.getElementById("manual-roll-saves");
+  if (savesContainer) {
+    const saveItems = [
+      { name: "强韧豁免", key: "强韧", icon: "🛡️" },
+      { name: "反射豁免", key: "反射", icon: "⚡" },
+      { name: "意志豁免", key: "意志", icon: "🧘" }
+    ];
+    savesContainer.innerHTML = saveItems.map(item => {
+      const info = getCheckBonusDetail(item.key);
+      return `
+        <button class="btn-manual-roll-item" data-type="${item.name}" data-key="${item.key}" style="background: rgba(30,35,48,0.9); border: 1px solid rgba(212,175,55,0.35); border-radius: 6px; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #f6d365; font-size: 0.88rem;">${item.icon} ${item.name}</strong>
+            <span style="font-weight: bold; color: ${info.bonus >= 0 ? '#48bb78' : '#f56565'}; font-size: 0.95rem;">${fmtMod(info.bonus)}</span>
+          </div>
+          <div style="font-size: 0.72rem; color: #a0aec0; margin-top: 3px;">${info.detail}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  // 2. 战系杀伐
+  const combatContainer = document.getElementById("manual-roll-combat");
+  if (combatContainer) {
+    const combatItems = [
+      { name: "近战兵刃挥斩", key: "命中", icon: "⚔️" },
+      { name: "迅捷先攻抢占", key: "先攻", icon: "🌪️" },
+      { name: "战系机动 (CMB)", key: "CMB", icon: "🦶" }
+    ];
+    combatContainer.innerHTML = combatItems.map(item => {
+      const info = getCheckBonusDetail(item.key);
+      return `
+        <button class="btn-manual-roll-item" data-type="${item.name}" data-key="${item.key}" style="background: rgba(30,35,48,0.9); border: 1px solid rgba(212,175,55,0.35); border-radius: 6px; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #f6d365; font-size: 0.88rem;">${item.icon} ${item.name}</strong>
+            <span style="font-weight: bold; color: ${info.bonus >= 0 ? '#48bb78' : '#f56565'}; font-size: 0.95rem;">${fmtMod(info.bonus)}</span>
+          </div>
+          <div style="font-size: 0.72rem; color: #a0aec0; margin-top: 3px;">${info.detail}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  // 3. 常用探险技能
+  const skillsContainer = document.getElementById("manual-roll-skills");
+  if (skillsContainer) {
+    const popularSkills = [
+      { name: "察觉", icon: "👁️" },
+      { name: "隐匿", icon: "🐾" },
+      { name: "察言观色", icon: "🔍" },
+      { name: "解除装置", icon: "🗝️" },
+      { name: "交涉", icon: "🗣️" },
+      { name: "欺骗", icon: "🎭" },
+      { name: "威吓", icon: "😠" },
+      { name: "杂技", icon: "🤸" },
+      { name: "攀爬", icon: "🧗" },
+      { name: "医疗", icon: "🩹" },
+      { name: "生存", icon: "🏕️" },
+      { name: "知识(神秘)", icon: "🔮" }
+    ];
+    skillsContainer.innerHTML = popularSkills.map(item => {
+      const info = getCheckBonusDetail(item.name);
+      return `
+        <button class="btn-manual-roll-item" data-type="${item.name}检定" data-key="${item.name}" style="background: rgba(30,35,48,0.9); border: 1px solid rgba(212,175,55,0.35); border-radius: 6px; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #f6d365; font-size: 0.88rem;">${item.icon} ${item.name}</strong>
+            <span style="font-weight: bold; color: ${info.bonus >= 0 ? '#48bb78' : '#f56565'}; font-size: 0.95rem;">${fmtMod(info.bonus)}</span>
+          </div>
+          <div style="font-size: 0.72rem; color: #a0aec0; margin-top: 3px;">${info.detail}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  // 4. 六维属性与纯运
+  const abilitiesContainer = document.getElementById("manual-roll-abilities");
+  if (abilitiesContainer) {
+    const abils = [
+      { name: "力量对抗", key: "力量", icon: "💪" },
+      { name: "敏捷对抗", key: "敏捷", icon: "🏃" },
+      { name: "体质对抗", key: "体质", icon: "❤️" },
+      { name: "智力对抗", key: "智力", icon: "🧠" },
+      { name: "感知对抗", key: "感知", icon: "🧘" },
+      { name: "魅力对抗", key: "魅力", icon: "✨" },
+      { name: "纯天运 D20", key: "纯运", icon: "🎲" }
+    ];
+    abilitiesContainer.innerHTML = abils.map(item => {
+      const info = item.key === "纯运" ? { bonus: 0, detail: "无修正纯骰目" } : getCheckBonusDetail(item.key);
+      return `
+        <button class="btn-manual-roll-item" data-type="${item.name}" data-key="${item.key}" style="background: rgba(30,35,48,0.9); border: 1px solid rgba(212,175,55,0.35); border-radius: 6px; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #f6d365; font-size: 0.86rem;">${item.icon} ${item.name}</strong>
+            <span style="font-weight: bold; color: ${info.bonus >= 0 ? '#48bb78' : '#f56565'}; font-size: 0.92rem;">${fmtMod(info.bonus)}</span>
+          </div>
+          <div style="font-size: 0.7rem; color: #a0aec0; margin-top: 3px;">${info.detail}</div>
+        </button>
+      `;
+    }).join("");
+  }
+
+  // 绑定所有按钮的自主投骰事件
+  document.querySelectorAll(".btn-manual-roll-item").forEach(btn => {
+    btn.onclick = () => {
+      const type = btn.getAttribute("data-type");
+      const key = btn.getAttribute("data-key");
+      const info = key === "纯运" ? { bonus: 0, detail: "纯净天数" } : getCheckBonusDetail(key);
+
+      const modal = document.getElementById("modal-manual-roll");
+      if (modal) modal.classList.add("hidden");
+
+      // 执行拟真 3D 物理投骰
+      performDiceRoll(type, info.bonus, 12, (result) => {
+        const sendText = `【玩家自主发起 · ${type}】：投出 D20 (${result.d20}) + 修正总加值 (${fmtMod(result.bonus)}) [${info.detail}] = 终值 ${result.total}（请司命依此命数裁决判定后果并推进剧情）`;
+        sendPlayerAction(sendText);
+      });
+    };
+  });
+}
+
+
+// =========================================================
+// 13. 事件绑定与初始化启动
 // =========================================================
 
 function initApp() {
@@ -2436,12 +2708,13 @@ function initApp() {
   renderTacticalPanel();
   initInventoryModal();
   renderInventorySummaryCard();
+  initManualRollModal();
 
   // 2. 初始化战棋沙盘与新故事按钮
   CombatGrid.init();
   initNewStoryButton();
 
-  // 2. 初始化车卡向导与设置模态框
+  // 3. 初始化车卡向导与设置模态框
   initCharacterWizard();
   initSettingsModal();
 
@@ -2517,7 +2790,7 @@ function initApp() {
     hidePendingCheckBanner();
 
     performDiceRoll(check.type, check.bonus, check.dc, (result) => {
-      const outcomeText = `【${check.type}对抗结算】：投出 D20 (${result.d20}) + 加值 (${fmtMod(result.bonus)}) = 总计 ${result.total} vs 目标 DC ${check.dc} —— ${result.isSuccess ? '【成功】' : '【受挫/局势恶化】'}`;
+      const outcomeText = `【${check.type}对抗结算】：投出 D20 (${result.d20}) + 修正总加值 (${fmtMod(result.bonus)}) [${check.bonusDetail || '命格专修'}] = 终值 ${result.total} vs 目标 DC ${check.dc} —— ${result.isSuccess ? '【成功】' : '【受挫/局势恶化】'}`;
       sendPlayerAction(outcomeText);
     });
   };
