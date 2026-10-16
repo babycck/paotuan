@@ -940,7 +940,23 @@ function initCharacterWizard() {
       scores.push(sum);
     }
     state.wizard.rolledScores = scores.sort((a, b) => b - a);
+
+    // 智能依据当前世界观题材初选志向（彻底破除无脑塞给力量最高的偏见）
+    let defaultPreset = "balanced";
+    const theme = (state.theme || "").toLowerCase();
+    if (/考|清华|学|题|谋|文|书|策|智/.test(theme)) {
+      defaultPreset = "scholar";
+    } else if (/妃|宠|宫|商|老板|谈|社交|美|情|爱/.test(theme)) {
+      defaultPreset = "noble";
+    } else if (/厨|餐馆|菜|饭|潜|影|贼|偷|刺客/.test(theme)) {
+      defaultPreset = "artisan";
+    } else if (/战|杀|武|砍|霸|士|军/.test(theme)) {
+      defaultPreset = "warrior";
+    }
+
     renderAbilityAssignmentGrid();
+    initArchetypePresets();
+    applyArchetypePreset(defaultPreset);
     renderClassRecommendations(state.wizard.rolledScores);
   };
 
@@ -1115,6 +1131,79 @@ function renderClassRecommendations(scores) {
   });
 }
 
+// =========================================================
+// 全题材/流派一键志向配点预设 (彻底破除力量最高偏见)
+// =========================================================
+
+const ARCHETYPE_PRESETS = {
+  scholar: {
+    name: "文曲博学",
+    desc: "智力第一，体质第二，敏捷第三 (适合高考考清华、学者博士、军师策士、科学发明家)",
+    priority: ["INT", "CON", "DEX", "WIS", "CHA", "STR"]
+  },
+  noble: {
+    name: "倾城名流",
+    desc: "魅力第一，感知第二，敏捷第三 (适合后宫宠妃争宠、商界老板、名流社交、谈单融资)",
+    priority: ["CHA", "WIS", "DEX", "CON", "INT", "STR"]
+  },
+  artisan: {
+    name: "巧手神匠",
+    desc: "敏捷第一，感知第二，体质第三 (适合金牌神厨颠勺、潜伏暗哨、市井手工艺人)",
+    priority: ["DEX", "WIS", "CON", "STR", "INT", "CHA"]
+  },
+  warrior: {
+    name: "沙场骁勇",
+    desc: "力量第一，体质第二，敏捷第三 (适合古代战将、近战肉搏硬汉、贴身护卫保镖)",
+    priority: ["STR", "CON", "DEX", "WIS", "CHA", "INT"]
+  },
+  balanced: {
+    name: "凡人百态",
+    desc: "体质第一，智力第二，敏捷第三，力量第四 (普通人的一生，均衡无短板)",
+    priority: ["CON", "INT", "DEX", "STR", "WIS", "CHA"]
+  }
+};
+
+function applyArchetypePreset(presetKey) {
+  const preset = ARCHETYPE_PRESETS[presetKey];
+  if (!preset || !state.wizard.rolledScores || state.wizard.rolledScores.length < 6) return;
+
+  const sorted = [...state.wizard.rolledScores].sort((a, b) => b - a);
+  const plan = {};
+  preset.priority.forEach((attr, idx) => {
+    plan[attr] = sorted[idx];
+  });
+
+  state.wizard.assignedAbilities = { ...plan };
+
+  // 更新所有槽位 UI
+  Object.keys(plan).forEach(attrCode => {
+    const sel = document.querySelector(`.slot-select[data-attr="${attrCode}"]`);
+    if (sel) sel.value = plan[attrCode];
+    const valElem = document.getElementById(`slot-val-${attrCode}`);
+    if (valElem) valElem.textContent = plan[attrCode];
+  });
+
+  // 更新预设按钮高亮状态
+  document.querySelectorAll(".preset-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-preset") === presetKey);
+  });
+
+  audio.playAlert();
+}
+
+function initArchetypePresets() {
+  const panel = document.getElementById("archetype-presets-panel");
+  if (!panel) return;
+  panel.classList.remove("hidden");
+
+  document.querySelectorAll(".preset-btn").forEach(btn => {
+    btn.onclick = () => {
+      const presetKey = btn.getAttribute("data-preset");
+      applyArchetypePreset(presetKey);
+    };
+  });
+}
+
 function renderAbilityAssignmentGrid() {
   const container = document.getElementById("ability-assignment-grid");
   container.innerHTML = "";
@@ -1122,35 +1211,60 @@ function renderAbilityAssignmentGrid() {
     { code: "STR", name: "力量 (伤害/负重)" },
     { code: "DEX", name: "敏捷 (命中/闪避)" },
     { code: "CON", name: "体质 (气血/强韧)" },
-    { code: "INT", name: "智力 (技能/法术)" },
-    { code: "WIS", name: "感知 (察觉/意志)" },
-    { code: "CHA", name: "魅力 (交涉/气魄)" }
+    { code: "INT", name: "智力 (技能/学识/法术)" },
+    { code: "WIS", name: "感知 (察觉/意志/洞察)" },
+    { code: "CHA", name: "魅力 (交涉/气魄/风度)" }
   ];
 
   attrs.forEach((attr, idx) => {
     const slot = document.createElement("div");
     slot.className = "assign-slot";
-    const defaultVal = state.wizard.rolledScores[idx] || 10;
+    const currentVal = state.wizard.assignedAbilities[attr.code] || state.wizard.rolledScores[idx] || 10;
+    state.wizard.assignedAbilities[attr.code] = currentVal;
+
     slot.innerHTML = `
       <div class="slot-title">
         <span>${attr.name}</span>
-        <strong class="gold-text" id="slot-val-${attr.code}">${defaultVal}</strong>
+        <strong class="gold-text" id="slot-val-${attr.code}">${currentVal}</strong>
       </div>
       <select class="slot-select" data-attr="${attr.code}">
-        ${state.wizard.rolledScores.map((s, sIdx) => `
-          <option value="${s}" ${sIdx === idx ? 'selected' : ''}>天命出目: ${s}</option>
+        ${state.wizard.rolledScores.map(s => `
+          <option value="${s}" ${s === currentVal ? 'selected' : ''}>天命出目: ${s}</option>
         `).join('')}
       </select>
     `;
     container.appendChild(slot);
   });
 
+  // 绑定下拉修改事件：支持智能两两互换，杜绝重复点数冲突
   container.querySelectorAll(".slot-select").forEach(sel => {
     sel.onchange = (e) => {
-      const code = e.target.getAttribute("data-attr");
-      const val = parseInt(e.target.value, 10);
-      state.wizard.assignedAbilities[code] = val;
-      document.getElementById(`slot-val-${code}`).textContent = val;
+      const targetAttr = e.target.getAttribute("data-attr");
+      const newVal = parseInt(e.target.value, 10);
+      const oldVal = state.wizard.assignedAbilities[targetAttr];
+
+      // 寻找当前持有该 newVal 的另一个属性（若有则互换）
+      let swappedAttr = null;
+      for (const [code, val] of Object.entries(state.wizard.assignedAbilities)) {
+        if (code !== targetAttr && val === newVal) {
+          swappedAttr = code;
+          break;
+        }
+      }
+
+      if (swappedAttr) {
+        state.wizard.assignedAbilities[swappedAttr] = oldVal;
+        const otherSel = document.querySelector(`.slot-select[data-attr="${swappedAttr}"]`);
+        if (otherSel) otherSel.value = oldVal;
+        const otherValElem = document.getElementById(`slot-val-${swappedAttr}`);
+        if (otherValElem) otherValElem.textContent = oldVal;
+      }
+
+      state.wizard.assignedAbilities[targetAttr] = newVal;
+      document.getElementById(`slot-val-${targetAttr}`).textContent = newVal;
+
+      // 任何手动微调后取消预设按钮独占高亮
+      document.querySelectorAll(".preset-btn").forEach(btn => btn.classList.remove("active"));
     };
   });
 }

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>《问道大唐》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261017_08">
+  <link rel="stylesheet" href="style.css?v=20261017_09">
 </head>
 <body class="ink-theme">
   <!-- 顶栏导航 -->
@@ -436,6 +436,21 @@
             </div>
           </div>
 
+          <!-- 全题材/流派一键配点锦囊 (破除力量最高偏见) -->
+          <div class="archetype-presets-panel hidden" id="archetype-presets-panel">
+            <div class="presets-header">
+              <span class="gold-text">🎯 一键志向与流派配点：</span>
+              <small>彻底破除力量最高偏见，依您想玩的人生志向一键分配天命大点！</small>
+            </div>
+            <div class="presets-btn-row">
+              <button class="btn btn-silver btn-small preset-btn" data-preset="scholar">🎓 文曲博学 (智力首选 · 考清华/学霸/谋士)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="noble">👑 倾城名流 (魅力首选 · 宠妃/做老板/社交经商)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="artisan">🍳 巧手神匠 (敏捷首选 · 神厨/潜行暗哨/手工艺)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="warrior">⚔️ 沙场骁勇 (力量首选 · 武将/近战冲锋/硬汉)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="balanced">⚖️ 凡人百态 (均衡分派 · 普通人的一生)</button>
+            </div>
+          </div>
+
           <div class="ability-assignment-grid" id="ability-assignment-grid">
             <!-- 动态生成 6 组下拉槽位 -->
           </div>
@@ -630,6 +645,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_08"></script>
+  <script src="app.js?v=20261017_09"></script>
 </body>
 </html>

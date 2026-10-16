@@ -1895,5 +1895,63 @@ html, body {
   }
 }
 
+/* =========================================================
+   新增：全题材/流派一键志向配点面板 (破除力量最高偏见)
+   ========================================================= */
+
+.archetype-presets-panel {
+  background: #17151e;
+  border: 1px solid var(--ink-border-gold);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 12px 0 16px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.presets-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.presets-header small {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.presets-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-btn {
+  font-size: 11px;
+  padding: 6px 10px;
+  background: #201e28;
+  border: 1px solid var(--ink-border);
+  color: #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold-glow);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.preset-btn.active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(170, 130, 10, 0.4) 100%);
+  border-color: var(--gold-primary);
+  color: var(--gold-glow);
+  font-weight: bold;
+}
+
+
 
 
