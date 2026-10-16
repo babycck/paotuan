@@ -857,6 +857,10 @@ async function sendPlayerAction(actionText) {
               accumulatedText += parsed.content;
               contentElem.innerHTML = accumulatedText
                 .replace(/\[CHECK:.*?\]/g, "")
+                .replace(/\[QUEST:.*?\]/g, "")
+                .replace(/\[COMBAT:.*?\]/g, "")
+                .replace(/\[COMBAT_UPDATE:.*?\]/g, "")
+                .replace(/\[COMBAT_END\]/g, "")
                 .replace(/\n\n/g, "</p><p>")
                 .replace(/\n/g, "<br>");
               stream.scrollTop = stream.scrollHeight;
@@ -868,7 +872,7 @@ async function sendPlayerAction(actionText) {
       }
     }
 
-    // 后处理：解析主线任务指令与索骰指令
+    // 后处理：解析主线任务指令与索骰/战斗指令
     let processedText = accumulatedText;
     const questMatch = processedText.match(/\[QUEST:\s*([^\]]+)\]/i);
     if (questMatch) {
@@ -881,18 +885,40 @@ async function sendPlayerAction(actionText) {
       processedText = processedText.replace(questMatch[0], "").trim();
     }
 
+    // 战斗模式开启 (唯在战斗时自动呼出沙盘)
     const combatMatch = processedText.match(/\[COMBAT:\s*(\{.*?\})\]/i);
     if (combatMatch) {
       try {
         const combatData = JSON.parse(combatMatch[1]);
         if (typeof CombatGrid !== "undefined") {
-          CombatGrid.initOrUpdate(combatData);
-          CombatGrid.show();
+          CombatGrid.startCombat(combatData);
         }
       } catch (e) {
         console.warn("解析战术沙盘指令失败:", e);
       }
       processedText = processedText.replace(combatMatch[0], "").trim();
+    }
+
+    // 战斗走位与气血更新
+    const combatUpdateMatch = processedText.match(/\[COMBAT_UPDATE:\s*(\{.*?\})\]/i);
+    if (combatUpdateMatch) {
+      try {
+        const updateData = JSON.parse(combatUpdateMatch[1]);
+        if (typeof CombatGrid !== "undefined") {
+          CombatGrid.updateCombat(updateData);
+        }
+      } catch (e) {
+        console.warn("解析战斗更新指令失败:", e);
+      }
+      processedText = processedText.replace(combatUpdateMatch[0], "").trim();
+    }
+
+    // 战斗结束 (威胁解除，沙盘自动收起)
+    if (processedText.includes("[COMBAT_END]")) {
+      if (typeof CombatGrid !== "undefined") {
+        CombatGrid.endCombat();
+      }
+      processedText = processedText.replace(/\[COMBAT_END\]/gi, "").trim();
     }
 
     const cleanFinalText = parseAndHandleCheckDirective(processedText);
@@ -1931,6 +1957,53 @@ const CombatGrid = {
     }
   },
 
+  // 战斗开启 (唯战斗触发时自动展开沙盘)
+  startCombat(combatData) {
+    this.initOrUpdate(combatData);
+    this.show();
+    audio.playDiceRoll();
+    this.updateMeter(`⚔️ 【交锋打响】：遭遇 [${this.state.enemies[0]?.name || '敌手'}]！可在下方打字描述你的战术走位与出手动作。`);
+  },
+
+  // 战斗回合更新 (走位与气血实时同步)
+  updateCombat(updateData) {
+    if (updateData.player) {
+      if (typeof updateData.player.x === "number") this.state.player.x = updateData.player.x;
+      if (typeof updateData.player.y === "number") this.state.player.y = updateData.player.y;
+    }
+    if (updateData.enemies && Array.isArray(updateData.enemies)) {
+      updateData.enemies.forEach(upEnemy => {
+        const existing = this.state.enemies.find(e => e.name === upEnemy.name || e.id === upEnemy.id);
+        if (existing) {
+          if (typeof upEnemy.x === "number") existing.x = upEnemy.x;
+          if (typeof upEnemy.y === "number") existing.y = upEnemy.y;
+          if (typeof upEnemy.hp === "number") existing.hp = upEnemy.hp;
+          if (typeof upEnemy.maxHp === "number") existing.maxHp = upEnemy.maxHp;
+        } else {
+          this.state.enemies.push({
+            id: `enemy_${this.state.enemies.length + 1}`,
+            name: upEnemy.name || "敌人",
+            x: upEnemy.x ?? 7,
+            y: upEnemy.y ?? 5,
+            hp: upEnemy.hp ?? 10,
+            maxHp: upEnemy.maxHp ?? 10
+          });
+        }
+      });
+    }
+    this.render();
+    this.calcInitialDistance();
+  },
+
+  // 战斗结束 (威胁平息，自动收起沙盘)
+  endCombat() {
+    this.updateMeter("✨ 【战局平息】：威胁已化解，沙盘已收起……");
+    audio.playAlert();
+    setTimeout(() => {
+      this.hide();
+    }, 1800);
+  },
+
   resetPositions() {
     this.state.player.x = 2;
     this.state.player.y = 5;
@@ -1969,7 +2042,7 @@ const CombatGrid = {
     const e = this.state.enemies[0];
     const gridDist = Math.max(Math.abs(p.x - e.x), Math.abs(p.y - e.y));
     const ftDist = gridDist * 5;
-    this.updateMeter(`战术测距：我与 [${e.name}] 相距 ${ftDist} 尺 (${gridDist} 格) · 处于近战触及之外`);
+    this.updateMeter(`战术测距：我与 [${e.name}] 相距 ${ftDist} 尺 (${gridDist} 格) · HP: ${e.hp}/${e.maxHp}`);
   },
 
   updateMeter(text) {
