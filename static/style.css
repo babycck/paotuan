@@ -1654,4 +1654,246 @@ html, body {
   color: var(--text-dim);
 }
 
+/* =========================================================
+   新增：5 尺战术战棋沙盘面板 (PF1e 5-Foot Tactical Grid)
+   ========================================================= */
+
+.combat-grid-panel {
+  background: #111015;
+  border-bottom: 2px solid var(--ink-border-gold);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  padding: 12px 16px;
+  animation: fadeIn 0.25s ease forwards;
+  position: relative;
+  z-index: 50;
+}
+
+.combat-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grid-header-title h4 {
+  font-size: 14px;
+  color: #eee;
+  font-family: var(--font-serif);
+}
+
+.badge-crimson {
+  background: var(--ink-red);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 77, 77, 0.4);
+}
+
+.grid-distance-meter {
+  font-size: 12px;
+  color: var(--gold-glow);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px dashed var(--gold-dim);
+}
+
+.grid-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.combat-grid-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.tactical-board-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
+}
+
+.tactical-board {
+  display: grid;
+  grid-template-columns: repeat(10, 36px);
+  grid-template-rows: repeat(10, 36px);
+  gap: 2px;
+  background: #18171f;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid var(--ink-border-gold);
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
+  user-select: none;
+}
+
+.grid-cell {
+  width: 36px;
+  height: 36px;
+  background: #1e1d24;
+  border: 1px solid #2a2832;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.grid-cell:hover {
+  background: #2a2936;
+  border-color: var(--gold-dim);
+}
+
+/* 可移动范围高亮 (默认 6 格 = 30 尺) */
+.grid-cell.cell-reachable {
+  background: rgba(30, 90, 160, 0.25);
+  border-color: rgba(64, 150, 255, 0.5);
+}
+
+.grid-cell.cell-reachable:hover {
+  background: rgba(30, 90, 160, 0.45);
+  box-shadow: 0 0 8px rgba(64, 150, 255, 0.6);
+}
+
+/* 掩体/障碍 */
+.grid-cell.cell-cover {
+  background: #2a2830;
+  border-color: #3f3c49;
+  cursor: not-allowed;
+}
+.grid-cell.cell-cover::after {
+  content: "▨";
+  color: #555261;
+  font-size: 16px;
+}
+
+/* 选中网格高亮 */
+.grid-cell.cell-selected {
+  outline: 2px solid var(--gold-glow);
+  outline-offset: -2px;
+}
+
+/* 棋子标记点 (Pawn) */
+.grid-pawn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+  transition: transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.grid-pawn:hover {
+  transform: scale(1.15);
+}
+
+/* 玩家【我】棋子：幽蓝流光 */
+.pawn-player {
+  background: radial-gradient(circle, #3880ff 30%, #174ea6 100%);
+  color: #fff;
+  border: 2px solid #82b1ff;
+  box-shadow: 0 0 10px rgba(56, 128, 255, 0.8);
+}
+
+/* 敌方目标：猩红厉火 */
+.pawn-enemy {
+  background: radial-gradient(circle, #e53935 30%, #8e0000 100%);
+  color: #fff;
+  border: 2px solid #ff8a80;
+  box-shadow: 0 0 10px rgba(229, 57, 53, 0.8);
+}
+
+/* 友方/中立：金珀润泽 */
+.pawn-ally {
+  background: radial-gradient(circle, #fbc02d 30%, #c49000 100%);
+  color: #1a1a1a;
+  border: 2px solid #fff59d;
+  box-shadow: 0 0 8px rgba(251, 192, 45, 0.8);
+}
+
+/* 战棋图例栏 */
+.combat-grid-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.dot-player {
+  background: #3880ff;
+  box-shadow: 0 0 6px #3880ff;
+}
+
+.legend-dot.dot-enemy {
+  background: #e53935;
+  box-shadow: 0 0 6px #e53935;
+}
+
+.legend-dot.dot-ally {
+  background: #fbc02d;
+  box-shadow: 0 0 6px #fbc02d;
+}
+
+.legend-block.block-cover {
+  width: 12px;
+  height: 12px;
+  background: #2a2830;
+  border: 1px solid #444;
+  display: inline-block;
+}
+
+/* 移动端紧凑网格适配 */
+@media (max-width: 600px) {
+  .tactical-board {
+    grid-template-columns: repeat(10, 28px);
+    grid-template-rows: repeat(10, 28px);
+    gap: 1px;
+    padding: 3px;
+  }
+  .grid-cell {
+    width: 28px;
+    height: 28px;
+  }
+  .grid-pawn {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+}
+
+
 

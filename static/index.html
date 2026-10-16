@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>《问道大唐》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261017_06">
+  <link rel="stylesheet" href="style.css?v=20261017_08">
 </head>
 <body class="ink-theme">
   <!-- 顶栏导航 -->
@@ -25,6 +25,8 @@
     </div>
 
     <div class="header-actions">
+      <button id="btn-new-story" class="btn btn-silver" title="重开战役，开启一段全新故事与世界观">🔄 开启新故事</button>
+      <button id="btn-toggle-grid" class="btn btn-dark" title="展开/收起 5 尺战术战棋沙盘">⚔️ 5尺沙盘</button>
       <button id="btn-open-wizard" class="btn btn-gold" title="开启AI司命问询式车卡向导">📜 司命车卡</button>
       <button id="btn-save" class="btn btn-dark" title="保存当前跑团进度">💾 封存纪事</button>
       <button id="btn-load" class="btn btn-dark" title="读取历史跑团档案">📂 开启档案</button>
@@ -247,6 +249,36 @@
 
     <!-- 中栏：纯文字脑内剧场与自由叙事 -->
     <section class="panel narrative-panel" id="panel-narrative">
+      <!-- 5 尺战术战棋沙盘 (PF1e 5-Foot Tactical Grid) -->
+      <div class="combat-grid-panel hidden" id="combat-grid-panel">
+        <div class="combat-grid-header">
+          <div class="grid-header-title">
+            <span class="badge badge-crimson">⚔️ 战术交锋</span>
+            <h4>5 尺战术沙盘 (1格 = 5 尺 / 5 ft)</h4>
+          </div>
+          <div class="grid-distance-meter" id="grid-distance-meter">
+            <span>点击敌我棋子测算战术距离与移动范围</span>
+          </div>
+          <div class="grid-header-tools">
+            <button class="btn btn-silver btn-small" id="btn-reset-grid-pos" title="重设双方默认站位">🔄 复位</button>
+            <button class="btn-close-modal" id="btn-close-grid" title="收起战棋沙盘">✕</button>
+          </div>
+        </div>
+        <div class="combat-grid-body">
+          <div class="tactical-board-wrapper">
+            <div class="tactical-board" id="tactical-board">
+              <!-- 动态生成 10x10 网格及敌我彩色圆点标记 -->
+            </div>
+          </div>
+          <div class="combat-grid-legend">
+            <div class="legend-item"><span class="legend-dot dot-player"></span> <span>我 (蓝/绿，基础移速30尺/6格)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-enemy"></span> <span>敌对目标 (赤红)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-ally"></span> <span>同伴/中立 (金黄)</span></div>
+            <div class="legend-item"><span class="legend-block block-cover"></span> <span>桌椅/掩体障碍</span></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 剧情文本流 -->
       <div class="narrative-stream scrollable" id="narrative-stream">
         <div class="narrative-entry entry-dm">
@@ -598,6 +630,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_06"></script>
+  <script src="app.js?v=20261017_08"></script>
 </body>
 </html>

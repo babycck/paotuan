@@ -759,7 +759,7 @@ function appendNarrativeEntry(role, text) {
 
   const seal = document.createElement("div");
   seal.className = "speaker-seal";
-  seal.textContent = role === 'user' ? '行者' : '司命';
+  seal.textContent = role === 'user' ? '我' : '司命';
 
   const content = document.createElement("div");
   content.className = "entry-content";
@@ -879,6 +879,20 @@ async function sendPlayerAction(actionText) {
         themeDescElem.innerHTML = `<strong>【核心使命/主线】：</strong>${questContent}`;
       }
       processedText = processedText.replace(questMatch[0], "").trim();
+    }
+
+    const combatMatch = processedText.match(/\[COMBAT:\s*(\{.*?\})\]/i);
+    if (combatMatch) {
+      try {
+        const combatData = JSON.parse(combatMatch[1]);
+        if (typeof CombatGrid !== "undefined") {
+          CombatGrid.initOrUpdate(combatData);
+          CombatGrid.show();
+        }
+      } catch (e) {
+        console.warn("解析战术沙盘指令失败:", e);
+      }
+      processedText = processedText.replace(combatMatch[0], "").trim();
     }
 
     const cleanFinalText = parseAndHandleCheckDirective(processedText);
@@ -1744,12 +1758,276 @@ async function loadGameFromServer() {
 
 
 // =========================================================
-// 10. 事件绑定与初始化启动
+// 10. PF1e 5 尺战术战棋沙盘控制器 (Tactical Grid Combat)
 // =========================================================
 
-document.addEventListener("DOMContentLoaded", () => {
+const CombatGrid = {
+  panel: null,
+  board: null,
+  meter: null,
+  gridSize: 10, // 10x10 网格 (每格 5 尺)
+
+  // 战棋沙盘当前状态
+  state: {
+    player: { id: "player", name: "我", x: 2, y: 5, speedFt: 30 },
+    enemies: [
+      { id: "enemy_1", name: "刺客", x: 7, y: 5, hp: 12, maxHp: 12 }
+    ],
+    covers: [
+      { x: 4, y: 4 }, { x: 4, y: 5 }, { x: 5, y: 4 }
+    ],
+    selectedPawn: null
+  },
+
+  init() {
+    this.panel = document.getElementById("combat-grid-panel");
+    this.board = document.getElementById("tactical-board");
+    this.meter = document.getElementById("grid-distance-meter");
+
+    if (!this.panel || !this.board) return;
+
+    const btnClose = document.getElementById("btn-close-grid");
+    if (btnClose) btnClose.onclick = () => this.hide();
+
+    const btnToggle = document.getElementById("btn-toggle-grid");
+    if (btnToggle) btnToggle.onclick = () => this.toggle();
+
+    const btnReset = document.getElementById("btn-reset-grid-pos");
+    if (btnReset) btnReset.onclick = () => this.resetPositions();
+
+    this.render();
+  },
+
+  show() {
+    if (this.panel) {
+      this.panel.classList.remove("hidden");
+      this.render();
+    }
+  },
+
+  hide() {
+    if (this.panel) this.panel.classList.add("hidden");
+  },
+
+  toggle() {
+    if (!this.panel) return;
+    this.panel.classList.toggle("hidden");
+    if (!this.panel.classList.contains("hidden")) {
+      this.render();
+    }
+  },
+
+  resetPositions() {
+    this.state.player.x = 2;
+    this.state.player.y = 5;
+    if (this.state.enemies[0]) {
+      this.state.enemies[0].x = 7;
+      this.state.enemies[0].y = 5;
+    }
+    this.state.selectedPawn = null;
+    this.render();
+    this.updateMeter("已复位站位：我与前方目标相距 25 尺 (5 格)");
+  },
+
+  initOrUpdate(combatData) {
+    if (combatData.player) {
+      this.state.player.x = combatData.player.x ?? 2;
+      this.state.player.y = combatData.player.y ?? 5;
+      if (combatData.player.name) this.state.player.name = combatData.player.name;
+    }
+    if (combatData.enemies && Array.isArray(combatData.enemies)) {
+      this.state.enemies = combatData.enemies.map((e, idx) => ({
+        id: `enemy_${idx + 1}`,
+        name: e.name || `敌方${idx + 1}`,
+        x: e.x ?? (7 + idx),
+        y: e.y ?? 5,
+        hp: e.hp || 10,
+        maxHp: e.maxHp || 10
+      }));
+    }
+    this.render();
+    this.calcInitialDistance();
+  },
+
+  calcInitialDistance() {
+    if (!this.state.enemies || this.state.enemies.length === 0) return;
+    const p = this.state.player;
+    const e = this.state.enemies[0];
+    const gridDist = Math.max(Math.abs(p.x - e.x), Math.abs(p.y - e.y));
+    const ftDist = gridDist * 5;
+    this.updateMeter(`战术测距：我与 [${e.name}] 相距 ${ftDist} 尺 (${gridDist} 格) · 处于近战触及之外`);
+  },
+
+  updateMeter(text) {
+    if (this.meter) {
+      this.meter.innerHTML = `<span>${text}</span>`;
+    }
+  },
+
+  render() {
+    if (!this.board) return;
+    this.board.innerHTML = "";
+
+    const p = this.state.player;
+    const maxMoveGrids = Math.floor(p.speedFt / 5); // 30尺 = 6格
+
+    for (let y = 0; y < this.gridSize; y++) {
+      for (let x = 0; x < this.gridSize; x++) {
+        const cell = document.createElement("div");
+        cell.className = "grid-cell";
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+
+        // 障碍掩体
+        const isCover = this.state.covers.some(c => c.x === x && c.y === y);
+        if (isCover) {
+          cell.classList.add("cell-cover");
+          cell.title = `障碍掩体 (坐标: ${x}, ${y})`;
+        }
+
+        // 若选中了玩家，标示可走位范围
+        if (this.state.selectedPawn === "player" && !isCover) {
+          const dist = Math.max(Math.abs(p.x - x), Math.abs(p.y - y));
+          if (dist <= maxMoveGrids) {
+            cell.classList.add("cell-reachable");
+            cell.title = `可走位：需消耗 ${dist * 5} 尺移动力`;
+          }
+        }
+
+        // 放置玩家棋子
+        if (p.x === x && p.y === y) {
+          const pawn = document.createElement("div");
+          pawn.className = "grid-pawn pawn-player";
+          pawn.textContent = "我";
+          pawn.title = "【我】(点击高亮 30 尺移速范围)";
+          pawn.onclick = (ev) => {
+            ev.stopPropagation();
+            this.handlePawnClick("player");
+          };
+          cell.appendChild(pawn);
+        }
+
+        // 放置敌方棋子
+        this.state.enemies.forEach(enemy => {
+          if (enemy.x === x && enemy.y === y) {
+            const pawn = document.createElement("div");
+            pawn.className = "grid-pawn pawn-enemy";
+            pawn.textContent = enemy.name.slice(0, 1) || "敌";
+            pawn.title = `【${enemy.name}】(HP: ${enemy.hp}/${enemy.maxHp})`;
+            pawn.onclick = (ev) => {
+              ev.stopPropagation();
+              this.handleEnemyClick(enemy);
+            };
+            cell.appendChild(pawn);
+          }
+        });
+
+        cell.onclick = () => this.handleCellClick(x, y, isCover);
+        this.board.appendChild(cell);
+      }
+    }
+  },
+
+  handlePawnClick(id) {
+    if (this.state.selectedPawn === id) {
+      this.state.selectedPawn = null;
+      this.updateMeter("已取消选中。");
+    } else {
+      this.state.selectedPawn = id;
+      this.updateMeter("已选中【我】：半透明高亮格为一轮 30 尺（6 格）标准移速，点击高亮格可进行走位。");
+    }
+    this.render();
+  },
+
+  handleEnemyClick(enemy) {
+    const p = this.state.player;
+    const gridDist = Math.max(Math.abs(p.x - enemy.x), Math.abs(p.y - enemy.y));
+    const ftDist = gridDist * 5;
+    let desc = `与 [${enemy.name}] 距离 ${ftDist} 尺 (${gridDist} 格)`;
+    if (gridDist <= 1) {
+      desc += " —— 【近身接战中（近战触及 5 尺）】";
+    } else if (gridDist <= 6) {
+      desc += " —— 【冲锋攻击或一轮移动可达】";
+    } else {
+      desc += " —— 【需消耗全力奔跑或属于远程射程】";
+    }
+    this.updateMeter(desc);
+  },
+
+  handleCellClick(x, y, isCover) {
+    if (isCover) return;
+    if (this.state.selectedPawn === "player") {
+      const p = this.state.player;
+      const maxMoveGrids = Math.floor(p.speedFt / 5);
+      const dist = Math.max(Math.abs(p.x - x), Math.abs(p.y - y));
+      if (dist <= maxMoveGrids) {
+        p.x = x;
+        p.y = y;
+        this.state.selectedPawn = null;
+        this.render();
+
+        if (this.state.enemies[0]) {
+          const e = this.state.enemies[0];
+          const newDist = Math.max(Math.abs(p.x - e.x), Math.abs(p.y - e.y)) * 5;
+          this.updateMeter(`【战术走位】：你移动了 ${dist * 5} 尺，现与 [${e.name}] 相距 ${newDist} 尺。可直接在下方打字声明行动！`);
+        } else {
+          this.updateMeter(`【战术走位】：你移动了 ${dist * 5} 尺至坐标 (${x}, ${y})。`);
+        }
+      }
+    }
+  }
+};
+
+
+// =========================================================
+// 11. 开启新故事与世界观重置 (New Story Controller)
+// =========================================================
+
+function initNewStoryButton() {
+  const btn = document.getElementById("btn-new-story");
+  if (!btn) return;
+
+  btn.onclick = async () => {
+    const confirmed = confirm("确定要开启一段全新的故事吗？\n\n当前战役历史将被清空，您可以重新输入任何题材（如古代后宫宠妃、高三考清华、现代底层创业、地下党谍战、餐馆开业等），由司命为您量身推演开局切入点！");
+    if (!confirmed) return;
+
+    state.history = [];
+    state.theme = "待行者定夺……";
+    state.quest = "";
+    state.hasStartedFirstAct = false;
+    state.pendingCheck = null;
+
+    const stream = document.getElementById("narrative-stream");
+    stream.innerHTML = "";
+
+    const subTitleElem = document.getElementById("campaign-theme-subtitle");
+    if (subTitleElem) subTitleElem.textContent = "全自由题材叙事引擎";
+    const themeDescElem = document.getElementById("current-theme-desc");
+    if (themeDescElem) themeDescElem.textContent = "待定夺……";
+
+    const charName = state.character?.profile?.name || "行者";
+    const newStoryIntro = `【万象新启 · 乾坤重开】\n\n旧岁已逝，风云重开。当前命格：【${charName}】。\n\n请问这次你想体验怎样的人生或故事？（无论古代后宫、现代高考、底层打工经商、还是谍战末世，皆可直接打字告知你的题材背景设想，若有长期追求可说“主线是……”，由司命为你定制专属切入点！）\n\n你接下来要干嘛？`;
+    appendNarrativeEntry("assistant", newStoryIntro);
+
+    CombatGrid.hide();
+    hidePendingCheckBanner();
+
+    await saveGameToServer();
+  };
+}
+
+
+// =========================================================
+// 12. 事件绑定与初始化启动
+// =========================================================
+
+function initApp() {
   // 1. 初始化战术面板
   renderTacticalPanel();
+
+  // 2. 初始化战棋沙盘与新故事按钮
+  CombatGrid.init();
+  initNewStoryButton();
 
   // 2. 初始化车卡向导与设置模态框
   initCharacterWizard();
@@ -1881,4 +2159,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (e) {}
   })();
-});
+}
+
+// 健壮启动：避免移动端 Safari因时序错过 DOMContentLoaded 事件
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
+}

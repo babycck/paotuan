@@ -10,7 +10,7 @@ import random
 from typing import Dict, Any, List, Optional
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -110,9 +110,21 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/")
-async def root_redirect():
-    """根路径自动跳转至静态游戏主页"""
-    return RedirectResponse(url="/static/index.html")
+async def root_index():
+    """根路径原生直接输出静态游戏主页，免除 307 重定向，解决移动端和非标端口白屏"""
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
+@app.get("/style.css")
+async def get_css_root():
+    """兼容根路径直连 style.css 资源"""
+    return FileResponse(os.path.join(STATIC_DIR, "style.css"))
+
+
+@app.get("/app.js")
+async def get_js_root():
+    """兼容根路径直连 app.js 资源"""
+    return FileResponse(os.path.join(STATIC_DIR, "app.js"))
 
 
 @app.get("/favicon.ico")
@@ -354,6 +366,10 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
 3. 两大赛道闭环（掷骰 vs 变卦）：
    - 赛道 A · 执意掷骰并结算：收到投骰对抗结算后，根据实际出目成败冷峻刻画物理与现实后果。
    - 赛道 B · 放弃变卦与改弦易辙：若玩家心生犹豫或口风一转改做他事，司命必须【100% 允许玩家无损撤销变卦，严禁惩罚】！重新评估新行动对应的检定并再次问询！
+4. 【PF1e 5 尺战棋战术沙盘联动】：
+   若剧情进入剑拔弩张的武力交锋、枪火枪战、或刺客突袭等战斗冲突现场时，可在回复末尾输出一行机器标记，驱动前端 5 尺战术沙盘展开：
+   [COMBAT: {"player": {"x": 2, "y": 4}, "enemies": [{"name": "敌方名号", "x": 7, "y": 4, "hp": 12, "maxHp": 12}]}]
+   网格坐标范围为 0 到 9，每一格代表 PF1e 标准的 5 尺 (5 ft)，便于玩家直观测算射程、冲锋或掩体距离。
 """
     return prompt
 
