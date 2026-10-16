@@ -1225,7 +1225,7 @@ function finalizeCharacterCreation() {
   const nameInput = document.getElementById("input-char-name").value.trim() || "行者";
   const genderInput = document.getElementById("input-char-gender").value || "男";
   const ageInput = parseInt(document.getElementById("input-char-age").value, 10) || 20;
-  const tokenInput = document.getElementById("input-char-token").value.trim() || "防风打火机";
+  const tokenInput = document.getElementById("input-char-token").value.trim() || "家传断佩";
   const traitSelect = document.getElementById("wizard-trait-select").value || "反制者";
 
   const race = state.wizard.selectedRace || "人类";
@@ -1376,7 +1376,8 @@ function finalizeCharacterCreation() {
   const stream = document.getElementById("narrative-stream");
   stream.innerHTML = "";
 
-  const promptText = `【印契定魄】：行者【${nameInput}】乾坤命格已凝结定魄！佩剑在腰，寒甲覆身，随身秘物【${tokenInput}】已藏入袖中。\n\n命盘已开，风云待定。请阁下以故事背景告知你想玩一个什么样的故事？（可自由打字描写你心仪的故事背景与世界观，司命将以此展开专属单人跑团！）`;
+  const tokenDesc = (tokenInput && tokenInput !== "无") ? `，随身佩带信物【${tokenInput}】` : "，孑然一身独步江湖";
+  const promptText = `【印契定魄】：行者【${nameInput}】乾坤命格已凝结定魄！佩剑在腰，寒甲覆身${tokenDesc}。\n\n命盘已开，风云待定。请阁下以故事背景告知你想玩一个什么样的故事？（可自由打字描写你心仪的故事背景与世界观，司命将以此展开专属单人跑团！）`;
   appendNarrativeEntry("assistant", promptText);
 
   saveGameToServer();
