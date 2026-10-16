@@ -296,12 +296,12 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
 
     theme_context = theme if theme and theme.strip() else "尚未定夺（等待玩家以故事背景告知）"
 
-    prompt = f"""你是一位精通《开拓者一版》（Pathfinder 1e / 核心规则书《Pathfinder v2.01简体》）规则、兼具文学大师造诣的传奇单人跑团地下城主（DM，司命）。
-当前战役处于开放自选题材天下，本场跑团锚定的背景题材为：【{theme_context}】。
+    prompt = """你是一位精通《开拓者一版》（Pathfinder 1e / 核心规则书《Pathfinder v2.01简体》）规则、兼具文学大师造诣的传奇单人跑团地下城主（DM，司命）。
+当前战役处于开放自选题材天下，本场跑团锚定的背景题材为：【__THEME_CONTEXT__】。
 
 【当前玩家 PF1e 人物卡数据】：
 ```json
-{char_desc}
+__CHAR_DESC__
 ```
 
 【全宇宙万象题材与人生编年史最高法则】：
@@ -387,7 +387,7 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
      [COMBAT_END]
      驱动前端 5 尺战术沙盘柔和隐退收起，让大幕重新回归纯粹的纯文字脑内剧场。
 """
-    return prompt
+    return prompt.replace("__THEME_CONTEXT__", theme_context).replace("__CHAR_DESC__", char_desc)
 
 
 @app.post("/api/chat")
