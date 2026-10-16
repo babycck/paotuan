@@ -373,21 +373,28 @@ const state = {
       attackBonus: 3
     },
     load: { current: 35, lightMax: 66, medMax: 133, heavyMax: 200, status: "轻载" },
-    currency: 150, // 初始随身资财 150 GP (可自适应兑换银两/现金)
+    currency: 150, // 初始随身资财 150 GP
+    xp: { current: 0, next: 2000, level: 1 }, // 历练道行与等级轨
     inventory: [
-      { name: "精工长剑", category: "weapon", price: 15, weight: 4, qty: 1, desc: "1d8伤害, 19-20/×2" },
-      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, qty: 1, desc: "AC +4, ACP -1" },
+      { name: "精工长剑", category: "weapon", price: 15, weight: 4, qty: 1, equipped: true, desc: "1d8伤害, 19-20/×2" },
+      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, qty: 1, equipped: true, desc: "AC +4, ACP -1" },
       { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "饮用恢复 1d8+1 点气血生命" },
       { name: "探险者背包", category: "gear", price: 2, weight: 2, qty: 1, desc: "随身装具" },
       { name: "麻绳 (50尺)", category: "gear", price: 1, weight: 10, qty: 1, desc: "结实麻绳，攀爬脱困必备" }
     ]
   },
 
-  // 当前世界观题材 (待玩家自由定夺)
+  // 当前世界观题材
   theme: null,
 
   // 对话历史
   history: [],
+
+  // 历代风云编年史简报列表（后台静默长程记忆）
+  chronicles: [],
+
+  // 战役宏观暗络大纲（核心主线 + 3支线）
+  campaignArc: null,
 
   // 挂起的索骰信息 (Pending Check)
   pendingCheck: null,
@@ -412,8 +419,83 @@ const state = {
 
 
 // =========================================================
-// 4. 战术面板视图同步 (Tactical Panel Rendering)
+// 4. 战术面板视图同步、战利品与天命继业系统
 // =========================================================
+
+// 弹出战利品入囊飘字通知
+function showRewardToast(reward) {
+  const existing = document.querySelector(".reward-toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.className = "reward-toast";
+  
+  const itemsText = (reward.items || []).map(i => i.name).join("、");
+  const descParts = [];
+  if (reward.xp) descParts.push(`经验 +${reward.xp} XP`);
+  if (reward.gp) descParts.push(`碎银 +${reward.gp} GP`);
+  if (itemsText) descParts.push(`搜获道具：${itemsText}`);
+
+  toast.innerHTML = `
+    <div class="reward-icon">🏆</div>
+    <div>
+      <div class="reward-title">天道历练 · 战利品入囊</div>
+      <div class="reward-desc">${descParts.join(" · ") || reward.reason || '斩获丰厚收益'}</div>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4000);
+}
+
+// 增加经验值并检查晋级
+function addCharacterXP(amount, reason) {
+  const c = state.character;
+  if (!c) return;
+  if (!c.xp) c.xp = { current: 0, next: 2000, level: c.profile?.level || 1 };
+
+  c.xp.current += amount;
+  renderTacticalPanel();
+
+  if (c.xp.current >= c.xp.next && c.xp.level === 1) {
+    audio.playNat20();
+    appendNarrativeEntry("assistant", `【功参造化 · 经验圆满】：行者历练道行已臻至 ${c.xp.current}/${c.xp.next} 点！你浑身骨骼隐隐作响，内力激荡，可前往城镇客栈住店、或在荒野点击左栏【🏨 长休调息】正式破境晋升 2 级！`);
+  }
+}
+
+// 天命陨落与传奇继承者系统 (世界存续，后人继业)
+function showDeathLegacyModal() {
+  const modal = document.getElementById("modal-death-legacy");
+  if (!modal) return;
+  const epitaph = document.getElementById("death-legacy-epitaph");
+  const c = state.character;
+  const name = c?.profile?.name || "行者";
+  const cls = c?.profile?.class || "战士";
+  const age = c?.profile?.age || 20;
+
+  if (epitaph) {
+    epitaph.innerHTML = `
+      <strong>【行者 ${name} 终章碑铭】：</strong><br>
+      时年 ${age} 岁的${cls}【${name}】在风云暗潮中力竭长眠，身死道未消。<br>
+      旧人虽逝，但大千天下未曾停歇，未解之主线与天地宏愿犹在，留待后来人承接破局！
+    `;
+  }
+  modal.classList.remove("hidden");
+  audio.playNat1();
+
+  const legacyBtn = document.getElementById("btn-create-legacy-char");
+  if (legacyBtn) {
+    legacyBtn.onclick = () => {
+      modal.classList.add("hidden");
+      // 保持当前战役题材、主线大纲与既有编年史，重新打开车卡向导！
+      state.isLegacySuccession = true;
+      const wizardModal = document.getElementById("modal-wizard");
+      if (wizardModal) {
+        wizardModal.classList.remove("hidden");
+        showWizardStep(1);
+      }
+    };
+  }
+}
 
 function renderTacticalPanel() {
   const c = state.character;
@@ -437,6 +519,16 @@ function renderTacticalPanel() {
   const hpBar = document.getElementById("hp-bar");
   hpBar.style.width = `${hpPercent}%`;
 
+  // 历练道行与经验进度条
+  const xpObj = c.xp || { current: 0, next: 2000, level: c.profile.level || 1 };
+  const xpText = document.getElementById("xp-text");
+  const xpBar = document.getElementById("xp-bar");
+  if (xpText) xpText.textContent = `${xpObj.current} / ${xpObj.next} (${xpObj.level}级)`;
+  if (xpBar) {
+    const xpPercent = Math.min(100, (xpObj.current / xpObj.next) * 100);
+    xpBar.style.width = `${xpPercent}%`;
+  }
+
   // 状态指示 (瘫痪、濒死、死亡)
   const statusTag = document.getElementById("status-tag");
   const conScore = c.abilities.CON || 10;
@@ -454,6 +546,7 @@ function renderTacticalPanel() {
   } else {
     statusTag.textContent = "天命陨落 (阵亡)";
     statusTag.className = "status-tag status-dying";
+    showDeathLegacyModal();
   }
 
   // 先攻与战系机动 (CMB/CMD)
@@ -1001,6 +1094,8 @@ async function sendPlayerAction(actionText) {
         messages: state.history,
         character_info: state.character,
         theme: state.theme,
+        chronicles: state.chronicles || [],
+        campaign_arc: state.campaignArc || null,
         stream: true
       })
     });
@@ -1039,6 +1134,7 @@ async function sendPlayerAction(actionText) {
               }
               accumulatedText += parsed.content;
               contentElem.innerHTML = accumulatedText
+                .replace(/\[REWARD:.*?\]/g, "")
                 .replace(/\[CHECK:.*?\]/g, "")
                 .replace(/\[QUEST:.*?\]/g, "")
                 .replace(/\[COMBAT:.*?\]/g, "")
@@ -1060,8 +1156,48 @@ async function sendPlayerAction(actionText) {
       timerInterval = null;
     }
 
-    // 后处理：解析主线任务指令与索骰/战斗指令
+    // 后处理：解析主线任务指令、战利品、索骰与战斗指令
     let processedText = accumulatedText;
+
+    // 战利品与经验/金钱奖励解析 [REWARD: {"xp": 100, "gp": 30, "items": [...], "reason": "..."}]
+    const rewardMatch = processedText.match(/\[REWARD:\s*(\{.*?\})\]/i);
+    if (rewardMatch) {
+      try {
+        const rewardData = JSON.parse(rewardMatch[1]);
+        if (rewardData.xp && typeof addCharacterXP === "function") {
+          addCharacterXP(Number(rewardData.xp), rewardData.reason || "战斗/探险历练");
+        }
+        if (rewardData.gp) {
+          state.character.currency = (state.character.currency || 0) + Number(rewardData.gp);
+        }
+        if (Array.isArray(rewardData.items) && rewardData.items.length > 0) {
+          if (!state.character.inventory) state.character.inventory = [];
+          rewardData.items.forEach(item => {
+            const existing = state.character.inventory.find(i => i.name === item.name);
+            if (existing) {
+              existing.qty = (existing.qty || 1) + (Number(item.qty) || 1);
+            } else {
+              state.character.inventory.push({
+                name: item.name,
+                category: item.category || "gear",
+                price: Number(item.price) || 5,
+                weight: Number(item.weight) || 1,
+                qty: Number(item.qty) || 1,
+                desc: item.desc || "探险搜获"
+              });
+            }
+          });
+        }
+        if (typeof showRewardToast === "function") {
+          showRewardToast(rewardData);
+        }
+        renderTacticalPanel();
+      } catch (e) {
+        console.warn("解析战利品指令失败:", e);
+      }
+      processedText = processedText.replace(rewardMatch[0], "").trim();
+    }
+
     const questMatch = processedText.match(/\[QUEST:\s*([^\]]+)\]/i);
     if (questMatch) {
       const questContent = questMatch[1].trim();
@@ -1115,6 +1251,15 @@ async function sendPlayerAction(actionText) {
       .replace(/\n/g, "<br>");
 
     state.history.push({ role: "assistant", content: cleanFinalText });
+
+    // 提炼本回合高密度纪事存入长程风云编年史 (限 30 字，彻底避免上千回合失忆)
+    const rawPlain = cleanFinalText.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    if (rawPlain) {
+      if (!state.chronicles) state.chronicles = [];
+      const brief = rawPlain.slice(0, 30);
+      state.chronicles.push(`第${state.chronicles.length + 1}幕: ${brief}...`);
+      if (state.chronicles.length > 50) state.chronicles.shift(); // 保持最新的 50 条纪事
+    }
 
     // 自动保存本地存档
     saveGameToServer();
@@ -1773,9 +1918,22 @@ function finalizeCharacterCreation() {
 
   renderTacticalPanel();
 
-  // 重置题材状态与历史，发起新世界观发问
+  // 若为传奇继承者（前人陨落，后人接力），保留世界观题材、暗络大纲与编年史
+  if (state.isLegacySuccession) {
+    state.isLegacySuccession = false;
+    const legacyIntro = `【传奇继承者破局入局】：前代行者虽已长眠，但因果未断、主线犹存！新一代行者【${nameInput}】（时年 ${ageInput} 岁，${race}${cls}）身携【${tokenInput}】，追寻前代遗留的蛛丝马迹与未竟之局正式入局！\n\n请司命以此全新视角，紧密承接前代行者的故事线索展开推演！`;
+    appendNarrativeEntry("assistant", legacyIntro);
+    state.history.push({ role: "assistant", content: legacyIntro });
+    sendPlayerAction(`我（${nameInput}，${ageInput}岁，${race}${cls}）手持【${tokenInput}】，来到了前代行者留有最后音讯的这片天地，收敛心神、探查四周局势。`);
+    saveGameToServer();
+    return;
+  }
+
+  // 常规新开局：重置题材状态与历史，发起新世界观发问
   state.theme = null;
   state.history = [];
+  state.chronicles = [];
+  state.campaignArc = null;
 
   const stream = document.getElementById("narrative-stream");
   stream.innerHTML = "";
@@ -2359,27 +2517,121 @@ function renderInventoryModal() {
     row.className = "inv-item-row";
 
     const isPotionOrConsumable = it.category === "potion" || it.consumable || /药|水|绷带|干粮|卷轴|草|酒/.test(it.name);
+    const isEquipable = it.category === "weapon" || it.category === "armor" || /剑|刀|枪|弓|斧|杖|锤|刃|弩|甲|袍|衫|铠/.test(it.name);
+    const isEquipped = !!it.equipped;
     const qty = it.qty || 1;
+
+    let actionBtnHtml = `<span class="dim-text">常驻携带</span>`;
+    if (isPotionOrConsumable) {
+      actionBtnHtml = `<button class="btn btn-use-item" data-item="${it.name}">🎯 声明使用</button>`;
+    } else if (isEquipable) {
+      actionBtnHtml = isEquipped
+        ? `<button class="btn btn-equip-toggle equipped" data-item="${it.name}">🛡️ 已佩戴</button>`
+        : `<button class="btn btn-equip-toggle" data-item="${it.name}">⚔️ 装配切换</button>`;
+    }
 
     row.innerHTML = `
       <div class="inv-item-main">
-        <span class="inv-item-name">${it.name}</span>
+        <span class="inv-item-name">${it.name} ${isEquipped ? '<span style="color:#d4af37;font-size:11px;">[佩戴中]</span>' : ''}</span>
         <span class="inv-item-qty">x${qty}</span>
         <span class="inv-item-weight">${Math.round((it.weight || 1) * qty * 10) / 10} 磅</span>
       </div>
       <div class="inv-item-actions">
-        ${isPotionOrConsumable ? `<button class="btn btn-use-item" data-item="${it.name}">🎯 声明使用</button>` : `<span class="dim-text">常驻携带</span>`}
+        ${actionBtnHtml}
       </div>
     `;
 
     if (isPotionOrConsumable) {
-      row.querySelector(".btn-use-item").onclick = () => {
-        triggerUseItemAction(it);
-      };
+      const btn = row.querySelector(".btn-use-item");
+      if (btn) btn.onclick = () => triggerUseItemAction(it);
+    } else if (isEquipable) {
+      const btn = row.querySelector(".btn-equip-toggle");
+      if (btn) btn.onclick = () => toggleEquipItem(it);
     }
 
     listContainer.appendChild(row);
   });
+}
+
+// 动态换装逻辑：实时联动主手兵刃与护甲，更新 AC、命中与 ACP
+function toggleEquipItem(item) {
+  const c = state.character;
+  if (!c || !c.inventory) return;
+
+  if (item.category === "weapon" || /剑|刀|枪|弓|斧|杖|锤|刃|弩/.test(item.name)) {
+    const isNowEquipped = !item.equipped;
+    c.inventory.forEach(i => {
+      if (i.category === "weapon" || /剑|刀|枪|弓|斧|杖|锤|刃|弩/.test(i.name)) {
+        i.equipped = false;
+      }
+    });
+    item.equipped = isNowEquipped;
+
+    const strMod = calcMod(c.abilities.STR);
+    if (isNowEquipped) {
+      let dice = "1d8";
+      let type = "挥砍";
+      let range = [19, 20];
+      let mult = 2;
+      if (/长剑|太刀/.test(item.name)) { dice = "1d8"; type = "挥砍"; range = [19, 20]; mult = 2; }
+      else if (/巨剑|大剑/.test(item.name)) { dice = "2d6"; type = "挥砍"; range = [19, 20]; mult = 2; }
+      else if (/短剑|匕首/.test(item.name)) { dice = "1d4"; type = "穿刺"; range = [19, 20]; mult = 2; }
+      else if (/长弓|短弓|轻弩|重弩/.test(item.name)) { dice = "1d8"; type = "穿刺"; range = [20]; mult = 3; }
+      else if (/战斧|手斧/.test(item.name)) { dice = "1d8"; type = "挥砍"; range = [20]; mult = 3; }
+      else if (/重锤|铁棍|木杖/.test(item.name)) { dice = "1d6"; type = "钝击"; range = [20]; mult = 2; }
+
+      c.weapon = {
+        name: item.name,
+        threatRange: range,
+        critMultiplier: mult,
+        damageDice: dice,
+        damageType: type,
+        attackBonus: c.bab + strMod
+      };
+    } else {
+      c.weapon = {
+        name: "徒手空拳",
+        threatRange: [20],
+        critMultiplier: 2,
+        damageDice: "1d3",
+        damageType: "钝击",
+        attackBonus: c.bab + strMod
+      };
+    }
+  } else if (item.category === "armor" || /甲|袍|衫|铠|盾/.test(item.name)) {
+    const isNowEquipped = !item.equipped;
+    c.inventory.forEach(i => {
+      if (i.category === "armor" || /甲|袍|衫|铠/.test(i.name)) {
+        i.equipped = false;
+      }
+    });
+    item.equipped = isNowEquipped;
+
+    let armorBonus = 0;
+    let acp = 0;
+    let maxDex = 99;
+
+    if (isNowEquipped) {
+      if (/链甲衫/.test(item.name)) { armorBonus = 4; acp = -1; maxDex = 4; }
+      else if (/皮甲|皮袍/.test(item.name)) { armorBonus = 2; acp = 0; maxDex = 6; }
+      else if (/板甲|全身甲|鳞甲/.test(item.name)) { armorBonus = 6; acp = -4; maxDex = 2; }
+      else { armorBonus = 3; acp = -1; maxDex = 4; }
+    }
+
+    const dexMod = calcMod(c.abilities.DEX);
+    const appliedDex = Math.min(dexMod, maxDex);
+    c.ac.armor = armorBonus;
+    c.ac.acp = acp;
+    c.ac.maxDex = maxDex;
+    c.ac.dex = appliedDex;
+    c.ac.total = 10 + armorBonus + (c.ac.shield || 0) + appliedDex;
+    c.ac.touch = 10 + appliedDex;
+    c.ac.flatFooted = 10 + armorBonus + (c.ac.shield || 0);
+  }
+
+  audio.playAlert();
+  renderTacticalPanel();
+  renderInventoryModal();
 }
 
 function triggerUseItemAction(item) {
@@ -2943,6 +3195,149 @@ function renderManualRollGrid() {
 
 
 // =========================================================
+// 12.5 客栈长休与破境晋级系统 (Rest & Level Up)
+// =========================================================
+
+function initRestAndLevelUp() {
+  const btnRest = document.getElementById("btn-inn-rest");
+  const modalLevelUp = document.getElementById("modal-level-up");
+  const btnRoll = document.getElementById("btn-levelup-roll");
+  const btnAvg = document.getElementById("btn-levelup-avg");
+  const btnClose = document.getElementById("btn-close-levelup");
+
+  if (btnRest) {
+    btnRest.onclick = () => {
+      handleInnRestAction();
+    };
+  }
+
+  if (btnRoll) {
+    btnRoll.onclick = () => {
+      applyLevelUp("roll");
+    };
+  }
+
+  if (btnAvg) {
+    btnAvg.onclick = () => {
+      applyLevelUp("avg");
+    };
+  }
+
+  if (btnClose && modalLevelUp) {
+    btnClose.onclick = () => {
+      modalLevelUp.classList.add("hidden");
+    };
+  }
+}
+
+function handleInnRestAction() {
+  const c = state.character;
+  if (!c) return;
+
+  // 检查资财
+  let restDesc = "";
+  if ((c.currency || 0) >= 5) {
+    c.currency -= 5;
+    restDesc = "花费 5 GP 入住城镇客栈上房安歇调养，热水沐浴并饱餐一顿。";
+  } else {
+    restDesc = "在荒野安全处燃起篝火扎营轮流守夜，就着干粮调息打坐了一整夜。";
+  }
+
+  // 气血与自发法术位完全回满
+  c.hp.current = c.hp.max;
+  if (state.spellSlots) {
+    state.spellSlots.current = state.spellSlots.max;
+  }
+  renderTacticalPanel();
+
+  audio.playDiceRoll();
+
+  // 若经验已满 2000 且当前为 1 级，唤出晋升弹窗
+  if (c.xp && c.xp.current >= c.xp.next && (c.xp.level || 1) === 1) {
+    openLevelUpModal();
+  } else {
+    appendNarrativeEntry("assistant", `【🏨 调息长休宿毕】：行者${restDesc} 经脉舒畅、暗伤尽褪，当前气血精力全然回满（HP: ${c.hp.current}/${c.hp.max}）！`);
+  }
+}
+
+function openLevelUpModal() {
+  const modal = document.getElementById("modal-level-up");
+  if (!modal) return;
+
+  const c = state.character;
+  const cls = c?.profile?.class || "战士";
+  const clsData = PF1E_RULES.classes[cls] || PF1E_RULES.classes["战士"];
+  const hd = clsData.hd || 10;
+  const conMod = calcMod(c.abilities.CON);
+  const avgGain = Math.max(1, Math.floor(hd / 2) + 1 + conMod);
+
+  const preview = document.getElementById("levelup-stats-preview");
+  if (preview) {
+    preview.innerHTML = `
+      <p><strong>当前阶位：</strong>1 级 ${cls} ➔ <span style="color:#d4af37;font-weight:bold;">2 级 ${cls}</span></p>
+      <p><strong>天命气血：</strong>生命骰 d${hd} + 体质修正(${fmtMod(conMod)})</p>
+      <p><strong>保底均值：</strong>稳定增长 +${avgGain} 点气血生命上限</p>
+      <p><strong>战斗专精：</strong>基础攻击加值 (BAB) 与豁免阶位将同步提升！</p>
+    `;
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function applyLevelUp(mode) {
+  const modal = document.getElementById("modal-level-up");
+  if (modal) modal.classList.add("hidden");
+
+  const c = state.character;
+  if (!c) return;
+
+  const cls = c.profile.class || "战士";
+  const clsData = PF1E_RULES.classes[cls] || PF1E_RULES.classes["战士"];
+  const hd = clsData.hd || 10;
+  const conMod = calcMod(c.abilities.CON);
+
+  let hpGain = 0;
+  let methodDesc = "";
+
+  if (mode === "roll") {
+    const rolled = Math.floor(Math.random() * hd) + 1;
+    hpGain = Math.max(1, rolled + conMod);
+    methodDesc = `🎲 天命摇骰 (1d${hd} 投出 ${rolled} + 体质 ${fmtMod(conMod)}) ➔ 气血上限激增 +${hpGain} 点`;
+  } else {
+    hpGain = Math.max(1, Math.floor(hd / 2) + 1 + conMod);
+    methodDesc = `🛡️ 稳妥保底 (均值 ${Math.floor(hd / 2) + 1} + 体质 ${fmtMod(conMod)}) ➔ 气血上限稳健增长 +${hpGain} 点`;
+  }
+
+  // 晋升为 2 级
+  c.profile.level = 2;
+  c.xp.level = 2;
+  c.xp.next = 5000;
+  c.hp.max += hpGain;
+  c.hp.current = c.hp.max;
+
+  // 全 BAB 职业在 2 级 BAB 由 1 变 2
+  if (clsData.babType === "full") {
+    c.bab = 2;
+    const strMod = calcMod(c.abilities.STR);
+    if (c.weapon) c.weapon.attackBonus = c.bab + strMod;
+    c.cmb = c.bab + strMod;
+    c.cmd = 10 + c.bab + strMod + calcMod(c.abilities.DEX);
+  }
+
+  // 强豁免在 2 级 +1
+  clsData.goodSaves.forEach(saveKey => {
+    if (c.saves[saveKey] !== undefined) c.saves[saveKey] += 1;
+  });
+
+  audio.playNat20();
+  renderTacticalPanel();
+  saveGameToServer();
+
+  appendNarrativeEntry("assistant", `【🌟 破境晋升 2 级】：行者在长休调息中参悟天道，正式晋升为【2 级 ${cls}】！\n${methodDesc}！当前气血上限提升至 ${c.hp.max} 点，战意澎湃！`);
+}
+
+
+// =========================================================
 // 13. 事件绑定与初始化启动
 // =========================================================
 
@@ -2952,6 +3347,7 @@ function initApp() {
   initInventoryModal();
   renderInventorySummaryCard();
   initManualRollModal();
+  initRestAndLevelUp();
 
   // 2. 初始化战棋沙盘与新故事按钮
   CombatGrid.init();

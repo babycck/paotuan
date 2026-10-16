@@ -80,6 +80,22 @@
             <span class="hp-hint">绝对阵亡线: -<span id="death-threshold">13</span></span>
           </div>
 
+          <!-- 历练道行 (XP) 进度条与长休调息 -->
+          <div class="xp-core-box" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div class="xp-bar-label-row" style="display: flex; justify-content: space-between; font-size: 0.76rem; color: #f6d365; margin-bottom: 3px;">
+              <span>🌟 历练道行 (XP)</span>
+              <span id="xp-text">0 / 2000 (1级)</span>
+            </div>
+            <div class="xp-bar-track" style="height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid rgba(212,175,55,0.3);">
+              <div class="xp-bar-fill" id="xp-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #d4af37, #f6d365); transition: width 0.3s;"></div>
+            </div>
+            <div class="rest-actions-row" style="margin-top: 8px;">
+              <button type="button" class="btn btn-outline-gold btn-sm" id="btn-inn-rest" style="width: 100%; padding: 4px 6px; font-size: 0.74rem; border: 1px solid rgba(212,175,55,0.4); border-radius: 4px; background: rgba(212,175,55,0.1); color: #f6d365; cursor: pointer;" title="在客栈或荒野长休8小时：回满气血与法术位；若经验满2000点将触发晋级2级！">
+                🏨 长休调息 (回满气血法术 / 扎营晋级)
+              </button>
+            </div>
+          </div>
+
           <!-- 先攻与战系机动 (CMB/CMD) -->
           <div class="combat-grid">
             <div class="combat-cell">
@@ -768,6 +784,45 @@
     </div>
   </div>
 
+  <!-- 模态框 6：天命陨落 · 风云继业碑 (世界存续，后人继业) -->
+  <div class="modal-overlay hidden" id="modal-death-legacy">
+    <div class="modal-window death-legacy-window" style="max-width: 580px; width: 90vw; background: #12151c; border: 2px solid #9b2c2c; box-shadow: 0 10px 50px rgba(0,0,0,0.95); border-radius: 8px; text-align: center; padding: 24px 20px;">
+      <div style="font-size: 2.5rem; margin-bottom: 6px;">🪦</div>
+      <h3 style="color: #feb2b2; font-size: 1.3rem; margin: 0 0 10px 0; letter-spacing: 2px;">【天命陨落 · 留待后人】</h3>
+      <p id="death-legacy-epitaph" style="font-size: 0.88rem; color: #cbd5e0; line-height: 1.6; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; border-left: 3px solid #e53e3e; text-align: left; margin-bottom: 16px;">
+        行者饮恨长眠，身死道未消。旧人虽殁，但神都风云与未解主线依然在天地间回荡！
+      </p>
+      <div style="font-size: 0.82rem; color: #a0aec0; margin-bottom: 20px; line-height: 1.5;">
+        💡 <strong>【世界存续铁律】</strong>：当前大千世界、核心主线与过往编年史全部完好存续！您可以重新定魄一位新行者（如18岁新秀术士/游荡者），以全新视角踏入风云，承接先人未竟之业！
+      </div>
+      <button class="btn btn-gold" id="btn-create-legacy-char" style="width: 100%; padding: 10px 0; font-size: 1rem; font-weight: bold; letter-spacing: 1px; box-shadow: 0 0 15px rgba(212,175,55,0.4);">
+        📜 定魄新命 · 继业入局 (重车新卡)
+      </button>
+    </div>
+  </div>
+
+  <!-- 模态框 7：功参造化 · 晋升2级升级弹窗 -->
+  <div class="modal-overlay hidden" id="modal-level-up">
+    <div class="modal-window level-up-window" style="max-width: 520px; width: 90vw; background: #1a1e29; border: 2px solid var(--gold-border); box-shadow: 0 10px 45px rgba(212,175,55,0.3); border-radius: 8px; text-align: center; padding: 22px 18px;">
+      <div style="font-size: 2.2rem; margin-bottom: 4px;">🌟</div>
+      <h3 style="color: #f6d365; font-size: 1.25rem; margin: 0 0 8px 0;">【功参造化 · 晋升 2 级】</h3>
+      <p style="font-size: 0.85rem; color: #cbd5e0; margin-bottom: 16px;">
+        历经千锤百炼，道行终于圆满！气血上限即将突破，请定夺您的气血晋升之道：
+      </p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <button class="btn btn-gold" id="btn-lvl-roll-hp" style="padding: 12px 8px; font-size: 0.88rem; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <span>🎲 天命摇骰</span>
+          <small id="lvl-roll-hint" style="font-size: 0.72rem; opacity: 0.85;">掷 1d10 + 体质修正</small>
+        </button>
+        <button class="btn btn-silver" id="btn-lvl-avg-hp" style="padding: 12px 8px; font-size: 0.88rem; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+          <span>🛡️ 稳妥保底</span>
+          <small id="lvl-avg-hint" style="font-size: 0.72rem; opacity: 0.85;">固定取均值 + 体质修正</small>
+        </button>
+      </div>
+      <div id="lvl-result-msg" style="font-size: 0.84rem; color: #48bb78; min-height: 20px;"></div>
+    </div>
+  </div>
+
   <!-- 投骰动画与结算遮罩 -->
   <div class="dice-overlay hidden" id="overlay-dice">
     <div class="dice-stage">
@@ -789,6 +844,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_13"></script>
+  <script src="app.js?v=20261017_14"></script>
 </body>
 </html>

@@ -106,6 +106,8 @@ class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     character_info: Optional[Dict[str, Any]] = None
     theme: Optional[str] = None
+    chronicles: Optional[List[str]] = None
+    campaign_arc: Optional[Dict[str, Any]] = None
     stream: Optional[bool] = True
 
 
@@ -288,7 +290,12 @@ async def roll_dice_endpoint(req: DiceRollRequest):
         }
 
 
-def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: Optional[str] = None) -> str:
+def build_system_prompt(
+    character_info: Optional[Dict[str, Any]] = None, 
+    theme: Optional[str] = None,
+    chronicles: Optional[List[str]] = None,
+    campaign_arc: Optional[Dict[str, Any]] = None
+) -> str:
     """构建严格遵循《Pathfinder v2.01简体》规则、全宇宙全题材万象叙事与人生编年史的司命 (DM) 系统提示词"""
     char_desc = "暂未建立人物卡"
     if character_info:
@@ -296,13 +303,35 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
 
     theme_context = theme if theme and theme.strip() else "尚未定夺（等待玩家以故事背景告知）"
 
+    # 构建长程记忆纪事区块
+    chronicles_block = "暂无往前回目纪事（初启征程）"
+    if chronicles and len(chronicles) > 0:
+        chronicles_lines = [f"{i+1}. {c}" for i, c in enumerate(chronicles)]
+        chronicles_block = "\n".join(chronicles_lines)
+
+    # 构建宏观剧情大纲暗络区块
+    arc_block = ""
+    if campaign_arc:
+        arc_block = f"""
+【战役宏观剧情暗络网（★万变不离其宗，故事收束铁律★）】：
+- 核心主线总纲：{campaign_arc.get('main_quest', '探明乱局真相，完成终极心愿')}
+- 支线暗络 A (人情/门派网)：{campaign_arc.get('side_a', '市井街巷底层暗流')}
+- 支线暗络 B (秘宝/信物网)：{campaign_arc.get('side_b', '流落民间的绝密残卷与信物')}
+- 支线暗络 C (暗桩/潜伏危机)：{campaign_arc.get('side_c', '隐藏在暗处窥伺的幕后眼线')}
+【注意】：无论玩家在街头如何闲逛、喝茶打听，路遇的突发小插曲与偶遇 NPC，暗中皆须与上述主线或三大支线若隐若现地紧密咬合，越往后越收拢，绝不可发散跑偏！
+"""
+
     prompt = """你是一位精通《开拓者一版》（Pathfinder 1e / 核心规则书《Pathfinder v2.01简体》）规则、兼具文学大师造诣的传奇单人跑团地下城主（DM，司命）。
 当前战役处于开放自选题材天下，本场跑团锚定的背景题材为：【__THEME_CONTEXT__】。
 
-【当前玩家 PF1e 人物卡数据】：
+【当前玩家 PF1e 人物卡数据（程序权威驱动）】：
 ```json
 __CHAR_DESC__
 ```
+
+【行者历代风云编年史（真实长程记忆库，按时间线忠实记录，永不遗忘）】：
+__CHRONICLES_BLOCK__
+__ARC_BLOCK__
 
 【全宇宙万象题材与人生编年史最高法则】：
 本跑团引擎秉持“万物万象皆可 TRPG 跑团”的最高哲学。题材无界，不设任何偏见：
@@ -355,14 +384,16 @@ __CHAR_DESC__
 5. 永远停在临界点：描写的最后一句话永远是将行动悬在半空，紧接着必须且唯一地抛出收束句：“你接下来要干嘛？”
 
 【核心跑团检定：意图声明与索骰确认/变卦闭环铁律（跑团灵魂所在）】：
-0. 【检定克制门禁铁律（★严禁逢动必检，绝非每步都要掷骰★）】：
+0. 【检定克制门禁与“信息增量检定”铁律】：
    跑团的灵魂在于沉浸式交互与剧情推进，【绝对严禁将游戏变成繁琐的索骰地狱】！
-   - 常规交谈、日常对话、常识性观察周围、平稳移步、已知背景回忆、安全环境搜寻等【绝对严禁索骰，直接顺畅生动地推进叙事】！
-   - 唯有在【面临实质性重大物理阻力、有不可逆严重代价（如坠落万丈深渊、敌暗我明暗算、生死关头搏杀、说服敌对首脑）】时，才允许发起检定！
-   - 其余绝大多数常规举止，由司命直接依常理描摹世界与NPC的真实生动反馈，保持叙事的高速节奏与沉浸快感。
+   - 常规交谈、日常闲聊喝茶、常识性查看周围、平稳移步、已知背景回忆等【绝对严禁索骰，直接顺畅生动地推进叙事】！
+   - 深度探查/摸尸搜刮（如“我仔细查看巷口青石缝”、“搜刮刺客尸首”）：
+     * 检定胜出：赋予【隐藏线索/信息增量/搜获道具密信】；
+     * 检定未过：仅仅是【未能探知隐秘/常物无获】，剧情平稳继续，绝对严禁惩罚扣血！
+   - 唯有在【面临实质性重大物理阻力、生死一线搏杀、说服敌视首脑】等高危关头，方才索骰检定。
 
 1. 绝对严禁提前判定成败（No Premature Outcome）：
-   当玩家声明包含重大阻力的高危行动（如“我要解这道压轴题”、“我要拔枪反击”、“我要跟投资人摊牌”、“我要翻墙逃出后院”）时，【绝对严禁在玩家投骰前描写动作是否成功的结果】！
+   当玩家声明包含重大阻力的高危行动时，【绝对严禁在玩家投骰前描写动作是否成功的结果】！
 2. 定格临界一瞬并索骰确认：
    描写定格在动作即将爆发、交锋一触即发的临界画面。随后必须立刻刹车，向玩家索取检定并确认意图：
    输出标准的机器标记：
@@ -376,30 +407,20 @@ __CHAR_DESC__
    - 战斗启动门禁：非战斗状态下绝对保持纯文本，严禁展开沙盘！唯有当剧情爆发不可避免的刀剑冲突、枪火突袭、刺客暗算等武力战斗时，方可启动战斗模式。并在回复最末尾输出：
      [COMBAT: {"player": {"x": 2, "y": 5}, "enemies": [{"name": "敌方名号", "x": 7, "y": 5, "hp": 10, "maxHp": 10}]}]
    - 司命暗中车卡铁律（★难度温和友好，保护单人游玩体验★）：
-     司命必须在心中为敌方暗中排布简明命契卡，绝对严禁堆砌恶性数值！
-     标准敌方数值规范：
-     * 生命值 (HP)：6 ~ 12 点（让玩家打出 1~2 次漂亮命中即可瓦解敌人）；
-     * 防御等级 (AC)：12 ~ 14 点（玩家普通出目即可命中）；
-     * 攻击命中加值：+1 ~ +2；杀伤力：1d4 ~ 1d6；基础移速：30 尺（6 格）；
-     * 重点在于战术走位、掩体利用与破局爽快感，绝不可秒杀玩家。
-   - 自然语言走位与回合推演：
-     当玩家在对白中描述自然语言（如：“我往上走了两格，掀翻桌子当掩体射击”、“我后退两格拔剑迎击”）：
-     1. 司命心领神会，计算玩家在 10x10 网格中的新坐标（1 格 = 5 尺）；
-     2. 紧接着推演敌人在其回合的行动反应（持刃追逼、迂回包抄、远程投掷或反击）；
-     3. 索取相应的攻击或对抗检定，若战斗仍在持续，在回复末尾输出当前双方位置与血量更新：
-        [COMBAT_UPDATE: {"player": {"x": 新X, "y": 新Y}, "enemies": [{"name": "敌方名号", "x": 敌X, "y": 敌Y, "hp": 剩余HP, "maxHp": 初始HP}]}]
+     生命值 6~12 点，AC 12~14 点，攻击 +1~+2，绝不可秒杀玩家。
    - 战斗终结与沙盘自动收起：
-     当敌人气血归零倒地、重创求饶、被生擒制服、或士气崩溃负伤仓皇逃离现场时，战斗立刻宣布结束！司命必须在回复最末尾输出：
+     当敌人气血归零倒地、重创求饶、被生擒制服、或士气崩溃负伤仓皇逃离现场时，战斗立刻宣布结束！并在回复最末尾输出：
      [COMBAT_END]
-     驱动前端 5 尺战术沙盘柔和隐退收起，让大幕重新回归纯粹的纯文字脑内剧场。
-5. 【随身道具与法术施展真实结算规则】：
-   - 随身道具结算：当玩家在对白中声明使用随身道具（如：“我取出【治疗轻伤药水】饮下”），司命必须真实刻画药液滋养与伤情缓解，并依规则结算回复生命。
-   - 法术施展结算：当玩家声明施法（如：“我施展【魔法飞弹】轰击敌人”、“施展【法师护甲】护身”、“施展【睡眠术】”）：
-     1. 司命必须真实刻画其法术光晕、手势咒印与元素爆裂的物理声光特效；
-     2. 严格依 PF1e 规则结算效果（如魔法飞弹必然命中造成 1d4+1 伤害、护盾术 AC+4、睡眠术引发意志豁免对抗等）；
-     3. 严禁忽视玩家的法术构想。
+5. 【随身道具、法术施展与战后战利品真实结算规则】：
+   - 随身道具与施法结算：真实刻画药液滋养、法术光华与物理轰杀，严格依 PF1e 规则裁定效果。
+   - 战后结算与战利品入库（真实正向反馈）：
+     当玩家击败敌人、解决争端、完成委托、或主动摸尸搜得财物时，司命在回复末尾必须输出机器结算指令：
+     [REWARD: {"xp": 经验值, "gp": 碎银数, "items": [{"name": "物品名", "category": "gear/weapon/potion", "weight": 磅数, "desc": "说明"}], "reason": "结算事由"}]
+     驱动程序将真金白银、经验与战利品 100% 准确存入玩家行囊与人物卡！
+6. 【天命继业 · 传奇继承者接轨法则（世界不灭，后人继业）】：
+   当收到【天命继业 · 新行者入局】指令时，司命必须明确知晓：上一位行者虽已长眠，但世界格局、主线脉络与过往编年史完好存续！请以新行者之视角切入舞台（如在茶摊听闻旧案、偶得先人遗卷残页），承接未竟之志展开全新篇章！
 """
-    return prompt.replace("__THEME_CONTEXT__", theme_context).replace("__CHAR_DESC__", char_desc)
+    return prompt.replace("__THEME_CONTEXT__", theme_context).replace("__CHAR_DESC__", char_desc).replace("__CHRONICLES_BLOCK__", chronicles_block).replace("__ARC_BLOCK__", arc_block)
 
 
 @app.post("/api/chat")
@@ -407,16 +428,16 @@ async def chat_endpoint(req: ChatRequest):
     """
     核心对话流转接口
     连接 DeepSeek / OpenAI 兼容接口，并支持流式生成与模拟测试模式
-    默认选用 deepseek-flash 高性能模型
+    默认选用 deepseek-chat 高性能模型 (具备长程上下文支持)
     """
     import httpx
     cfg = load_config()
     api_key = cfg.get("api_key", "").strip()
     base_url = cfg.get("base_url", "https://api.deepseek.com").rstrip("/")
-    model = cfg.get("model", "deepseek-flash")
+    model = cfg.get("model", "deepseek-chat")
 
-    # 构建完整的消息链，将系统提示词置顶
-    sys_prompt = build_system_prompt(req.character_info, req.theme)
+    # 构建完整的消息链，将系统提示词置顶 (注入长程记忆与剧情大纲暗络)
+    sys_prompt = build_system_prompt(req.character_info, req.theme, req.chronicles, req.campaign_arc)
     if cfg.get("system_prompt_extra"):
         sys_prompt += "\n" + cfg["system_prompt_extra"]
 

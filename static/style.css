@@ -2365,6 +2365,96 @@ html, body {
   box-shadow: 0 0 8px rgba(229, 62, 62, 0.6);
 }
 
+/* =========================================================
+   13. 换装按钮、战利品入囊通知与历练道行
+   ========================================================= */
+
+.btn-equip-toggle {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: #93c5fd;
+  border: 1px solid #3b82f6;
+  padding: 4px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-equip-toggle:hover {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-equip-toggle.is-equipped {
+  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  color: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.btn-equip-toggle.is-equipped:hover {
+  background: #d97706;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+/* 战利品入囊飘字浮层 */
+.reward-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: rgba(18, 24, 38, 0.95);
+  border: 2px solid var(--gold-border);
+  box-shadow: 0 8px 30px rgba(212, 175, 55, 0.4);
+  border-radius: 8px;
+  padding: 12px 18px;
+  color: #fff;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideInUp 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards;
+}
+
+.reward-toast .reward-icon {
+  font-size: 1.8rem;
+}
+
+.reward-toast .reward-title {
+  color: #f6d365;
+  font-weight: bold;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.reward-toast .reward-desc {
+  color: #cbd5e0;
+  font-size: 0.8rem;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+
 
 
 
