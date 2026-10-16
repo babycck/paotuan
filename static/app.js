@@ -375,9 +375,11 @@ const state = {
     load: { current: 35, lightMax: 66, medMax: 133, heavyMax: 200, status: "轻载" },
     currency: 150, // 初始随身资财 150 GP (可自适应兑换银两/现金)
     inventory: [
-      { name: "精工长剑", category: "weapon", price: 15, weight: 4, desc: "1d8伤害, 19-20/×2" },
-      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, desc: "AC +4, ACP -1" },
-      { name: "探险者背包", category: "gear", price: 2, weight: 2, desc: "随身装具" }
+      { name: "精工长剑", category: "weapon", price: 15, weight: 4, qty: 1, desc: "1d8伤害, 19-20/×2" },
+      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, qty: 1, desc: "AC +4, ACP -1" },
+      { name: "治疗轻伤药水", category: "potion", price: 50, weight: 1, qty: 2, consumable: true, desc: "饮用恢复 1d8+1 点气血生命" },
+      { name: "探险者背包", category: "gear", price: 2, weight: 2, qty: 1, desc: "随身装具" },
+      { name: "麻绳 (50尺)", category: "gear", price: 1, weight: 10, qty: 1, desc: "结实麻绳，攀爬脱困必备" }
     ]
   },
 
@@ -581,6 +583,11 @@ function renderTacticalPanel() {
     `;
     skillsList.appendChild(li);
   });
+
+  // 联动刷新右栏行囊与装备快照
+  if (typeof renderInventorySummaryCard === "function") {
+    renderInventorySummaryCard();
+  }
 }
 
 
@@ -800,6 +807,14 @@ async function sendPlayerAction(actionText) {
   }
   if (isBranchChoice) {
     state.hasStartedFirstAct = true;
+  }
+
+  // 检查并扣除消耗道具（若通过行囊按钮使用）
+  if (state.pendingUsedItem) {
+    if (typeof consumeInventoryItem === "function") {
+      consumeInventoryItem(state.pendingUsedItem);
+    }
+    state.pendingUsedItem = null;
   }
 
   // 呈现玩家行动
@@ -1164,26 +1179,31 @@ function renderClassRecommendations(scores) {
 const ARCHETYPE_PRESETS = {
   scholar: {
     name: "文曲博学",
+    targetClass: "法师",
     desc: "智力第一，体质第二，敏捷第三 (适合高考考清华、学者博士、军师策士、科学发明家)",
     priority: ["INT", "CON", "DEX", "WIS", "CHA", "STR"]
   },
   noble: {
     name: "倾城名流",
+    targetClass: "吟游诗人",
     desc: "魅力第一，感知第二，敏捷第三 (适合后宫宠妃争宠、商界老板、名流社交、谈单融资)",
     priority: ["CHA", "WIS", "DEX", "CON", "INT", "STR"]
   },
   artisan: {
     name: "巧手神匠",
+    targetClass: "游荡者",
     desc: "敏捷第一，感知第二，体质第三 (适合金牌神厨颠勺、潜伏暗哨、市井手工艺人)",
     priority: ["DEX", "WIS", "CON", "STR", "INT", "CHA"]
   },
   warrior: {
     name: "沙场骁勇",
+    targetClass: "战士",
     desc: "力量第一，体质第二，敏捷第三 (适合古代战将、近战肉搏硬汉、贴身护卫保镖)",
     priority: ["STR", "CON", "DEX", "WIS", "CHA", "INT"]
   },
   balanced: {
     name: "凡人百态",
+    targetClass: "战士",
     desc: "体质第一，智力第二，敏捷第三，力量第四 (普通人的一生，均衡无短板)",
     priority: ["CON", "INT", "DEX", "STR", "WIS", "CHA"]
   }
@@ -1200,6 +1220,12 @@ function applyArchetypePreset(presetKey) {
   });
 
   state.wizard.assignedAbilities = { ...plan };
+
+  // 关键联动：根据志向一键选定并高亮门派职业！
+  if (preset.targetClass) {
+    state.wizard.selectedClass = preset.targetClass;
+    renderClassCards();
+  }
 
   // 更新所有槽位 UI
   Object.keys(plan).forEach(attrCode => {
@@ -1797,7 +1823,14 @@ function initMarketplaceModal() {
         // 扣除货币
         state.character.currency -= it.price;
         if (!state.character.inventory) state.character.inventory = [];
-        state.character.inventory.push({ ...it });
+
+        // 消耗品或已有物品：优先增加数量 qty
+        const existing = state.character.inventory.find(inv => inv.name === it.name);
+        if (existing) {
+          existing.qty = (existing.qty || 1) + 1;
+        } else {
+          state.character.inventory.push({ ...it, qty: 1 });
+        }
 
         // 如果购买的是武器且玩家需要更新
         if (it.category === "weapon" && (!state.character.weapon || confirm(`已购入【${it.name}】，是否将其设为当前主要佩兵？`))) {
@@ -1816,6 +1849,7 @@ function initMarketplaceModal() {
         else state.character.load.status = "重载";
 
         renderTacticalPanel();
+        renderInventorySummaryCard();
         refreshMarket();
         audio.playNat20();
         alert(`采办成功！成功购入【${it.name}】，消耗 ${it.price} GP。物品已存入行囊，负重增至 ${state.character.load.current} 磅！`);
@@ -1844,6 +1878,195 @@ function initMarketplaceModal() {
       renderMarketItems(currentCategory);
     };
   });
+}
+
+
+// =========================================================
+// 8. 随身行囊与装备全景管理器 (Inventory & Equipment Manager)
+// =========================================================
+
+function renderInventorySummaryCard() {
+  const card = document.getElementById("card-inventory-summary");
+  if (!card) return;
+  const c = state.character;
+  if (!c) return;
+
+  const summaryWeapon = document.getElementById("summary-weapon");
+  const summaryArmor = document.getElementById("summary-armor");
+  const summaryItemCount = document.getElementById("summary-item-count");
+
+  // 1. 兵刃展示
+  if (summaryWeapon) {
+    if (c.weapon) {
+      summaryWeapon.textContent = `${c.weapon.name} (${c.weapon.damageDice || '1d8'}, ${c.weapon.threatRange ? c.weapon.threatRange.join('-') : '19-20'}/x${c.weapon.critMultiplier || 2})`;
+    } else {
+      summaryWeapon.textContent = "空手 / 贴身防卫";
+    }
+  }
+
+  // 2. 甲胄展示
+  if (summaryArmor) {
+    const armorItem = (c.inventory || []).find(it => it.category === "armor");
+    if (armorItem) {
+      summaryArmor.textContent = `${armorItem.name} (AC+${c.ac?.armor || 4}, 检定${c.ac?.acp || -2})`;
+    } else {
+      summaryArmor.textContent = "无甲 / 常服";
+    }
+  }
+
+  // 3. 道具收纳概览
+  if (summaryItemCount) {
+    const items = (c.inventory || []).filter(it => it.category !== "armor" && it.category !== "weapon");
+    if (items.length === 0) {
+      summaryItemCount.textContent = "空空如也，可至货栈采办";
+    } else {
+      const names = items.slice(0, 3).map(it => `${it.name}${it.qty > 1 ? 'x' + it.qty : ''}`).join(", ");
+      summaryItemCount.textContent = items.length > 3 ? `${names}... 等${items.length}件` : names;
+    }
+  }
+}
+
+function initInventoryModal() {
+  const modal = document.getElementById("modal-inventory");
+  const btnOpen = document.getElementById("btn-open-inventory");
+  const cardSummary = document.getElementById("card-inventory-summary");
+  const btnClose = document.getElementById("btn-close-inventory");
+  const btnDone = document.getElementById("btn-done-inventory");
+
+  if (!modal) return;
+
+  const openModal = () => {
+    modal.classList.remove("hidden");
+    renderInventoryModal();
+  };
+
+  if (btnOpen) btnOpen.onclick = (e) => { e.stopPropagation(); openModal(); };
+  if (cardSummary) cardSummary.onclick = openModal;
+  if (btnClose) btnClose.onclick = () => modal.classList.add("hidden");
+  if (btnDone) btnDone.onclick = () => modal.classList.add("hidden");
+}
+
+function renderInventoryModal() {
+  const c = state.character;
+  if (!c) return;
+
+  // 资财与负重
+  const walletElem = document.getElementById("inv-modal-wallet");
+  if (walletElem) walletElem.textContent = `${c.currency || 0} GP`;
+
+  const weightBadge = document.getElementById("inv-weight-badge");
+  if (weightBadge && c.load) {
+    weightBadge.textContent = `负重: ${c.load.status} (${c.load.current}/${c.load.lightMax} 磅)`;
+  }
+
+  // 穿戴槽位
+  const wName = document.getElementById("equipped-weapon-name");
+  const wStats = document.getElementById("equipped-weapon-stats");
+  if (wName && c.weapon) {
+    wName.textContent = c.weapon.name || "长剑";
+    wStats.textContent = `${c.weapon.damageDice || '1d8'} ${c.weapon.damageType || '挥砍'} · 暴击 ${c.weapon.threatRange ? c.weapon.threatRange.join('-') : '19-20'}/x${c.weapon.critMultiplier || 2} · 命中加值 +${c.weapon.attackBonus || 3}`;
+  }
+
+  const aName = document.getElementById("equipped-armor-name");
+  const aStats = document.getElementById("equipped-armor-stats");
+  const armorItem = (c.inventory || []).find(it => it.category === "armor");
+  if (aName) {
+    aName.textContent = armorItem ? armorItem.name : "常服 / 无甲";
+    aStats.textContent = armorItem ? (armorItem.desc || `AC+${c.ac?.armor || 4}, 穿甲罚值 ${c.ac?.acp || -2}`) : "未装备防具，基础闪避完全依赖敏捷";
+  }
+
+  // 道具明细列表
+  const listContainer = document.getElementById("inv-items-list");
+  if (!listContainer) return;
+  listContainer.innerHTML = "";
+
+  const items = c.inventory || [];
+  if (items.length === 0) {
+    listContainer.innerHTML = `<div class="empty-tip">行囊内空无一物，可点击左栏资财前往【市集货栈】采办！</div>`;
+    return;
+  }
+
+  items.forEach(it => {
+    const row = document.createElement("div");
+    row.className = "inv-item-row";
+
+    const isPotionOrConsumable = it.category === "potion" || it.consumable || /药|水|绷带|干粮|卷轴|草|酒/.test(it.name);
+    const qty = it.qty || 1;
+
+    row.innerHTML = `
+      <div class="inv-item-main">
+        <span class="inv-item-name">${it.name}</span>
+        <span class="inv-item-qty">x${qty}</span>
+        <span class="inv-item-weight">${Math.round((it.weight || 1) * qty * 10) / 10} 磅</span>
+      </div>
+      <div class="inv-item-actions">
+        ${isPotionOrConsumable ? `<button class="btn btn-use-item" data-item="${it.name}">🎯 声明使用</button>` : `<span class="dim-text">常驻携带</span>`}
+      </div>
+    `;
+
+    if (isPotionOrConsumable) {
+      row.querySelector(".btn-use-item").onclick = () => {
+        triggerUseItemAction(it);
+      };
+    }
+
+    listContainer.appendChild(row);
+  });
+}
+
+function triggerUseItemAction(item) {
+  const modal = document.getElementById("modal-inventory");
+  if (modal) modal.classList.add("hidden");
+
+  // 记录待扣除的消耗道具
+  state.pendingUsedItem = item.name;
+
+  // 构造生动的对白动作填入输入框
+  const inputElem = document.getElementById("input-action");
+  if (inputElem) {
+    let actionStr = "";
+    if (/药水|灵液|露|散|丸/.test(item.name)) {
+      actionStr = `我从随身行囊中取出【${item.name}】，拔开瓶塞一饮而尽！`;
+    } else if (/绷带|急救|草/.test(item.name)) {
+      actionStr = `我迅速从行囊中翻出【${item.name}】，利落地处理伤口并包扎止血！`;
+    } else {
+      actionStr = `我迅速从行囊中取出【${item.name}】，立即展开使用！`;
+    }
+    inputElem.value = actionStr;
+    inputElem.focus();
+  }
+
+  audio.playAlert();
+}
+
+function consumeInventoryItem(itemName) {
+  const c = state.character;
+  if (!c || !c.inventory) return;
+
+  const itemIdx = c.inventory.findIndex(it => it.name === itemName);
+  if (itemIdx === -1) return;
+
+  const it = c.inventory[itemIdx];
+  const itemWeight = it.weight || 1;
+
+  if (it.qty && it.qty > 1) {
+    it.qty -= 1;
+  } else {
+    c.inventory.splice(itemIdx, 1);
+  }
+
+  // 扣减当前负重
+  if (c.load) {
+    c.load.current = Math.max(0, Math.round(((c.load.current || 0) - itemWeight) * 10) / 10);
+    const limits = getLoadThresholds(c.abilities.STR, "中型");
+    if (c.load.current <= limits.light) c.load.status = "轻载";
+    else if (c.load.current <= limits.medium) c.load.status = "中载";
+    else c.load.status = "重载";
+  }
+
+  renderTacticalPanel();
+  renderInventorySummaryCard();
+  saveGameToServer();
 }
 
 async function saveGameToServer() {
@@ -2209,8 +2432,10 @@ function initNewStoryButton() {
 // =========================================================
 
 function initApp() {
-  // 1. 初始化战术面板
+  // 1. 初始化战术面板与随身行囊
   renderTacticalPanel();
+  initInventoryModal();
+  renderInventorySummaryCard();
 
   // 2. 初始化战棋沙盘与新故事按钮
   CombatGrid.init();

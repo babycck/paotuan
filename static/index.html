@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>《问道大唐》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261017_10">
+  <link rel="stylesheet" href="style.css?v=20261017_11">
 </head>
 <body class="ink-theme">
   <!-- 顶栏导航 -->
@@ -351,6 +351,28 @@
       </div>
 
       <div class="panel-content scrollable">
+        <!-- 随身行囊与装备全景卡片 (置顶显眼) -->
+        <section class="card inventory-summary-card" id="card-inventory-summary">
+          <div class="section-title-row">
+            <h4>🎒 随身行囊与装备</h4>
+            <button class="btn btn-gold btn-small" id="btn-open-inventory">查看行囊</button>
+          </div>
+          <div class="inv-summary-body">
+            <div class="inv-summary-row">
+              <span class="inv-label">⚔️ 佩带兵刃：</span>
+              <strong class="gold-text" id="summary-weapon">长剑 (1d8, 19-20/x2)</strong>
+            </div>
+            <div class="inv-summary-row">
+              <span class="inv-label">🛡️ 身披甲胄：</span>
+              <strong class="gold-text" id="summary-armor">链甲衫 (AC+4, 检定-2)</strong>
+            </div>
+            <div class="inv-summary-row">
+              <span class="inv-label">📦 行囊杂物：</span>
+              <span class="dim-text" id="summary-item-count">轻伤药水x2, 绳索, 火把...</span>
+            </div>
+          </div>
+        </section>
+
         <!-- 场外笔记（防剧透草稿本） -->
         <section class="card notes-card">
           <div class="section-title-row">
@@ -412,7 +434,38 @@
             </button>
           </div>
 
-          <!-- 单人独行跑团避坑锦囊 -->
+          <!-- 第二层：六维属性分配槽位 -->
+          <div class="ability-assignment-grid" id="ability-assignment-grid">
+            <!-- 动态生成 6 组下拉槽位 -->
+          </div>
+
+          <!-- 第三层：全题材/流派一键志向配点锦囊 (点击直接联动选定门派职业) -->
+          <div class="archetype-presets-panel hidden" id="archetype-presets-panel">
+            <div class="presets-header">
+              <span class="gold-text">🎯 一键志向与流派配点：</span>
+              <small>选定志向后不仅六维大点精准归位，系统亦将自动为您选定门派职业！</small>
+            </div>
+            <div class="presets-btn-row">
+              <button class="btn btn-silver btn-small preset-btn" data-preset="scholar">🎓 文曲博学 (智力首选 · 绑定法师/学士 · 考清华/学霸)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="noble">👑 倾城名流 (魅力首选 · 绑定吟游诗人 · 宠妃/经商老板)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="artisan">🍳 巧手神匠 (敏捷首选 · 绑定游荡者 · 神厨/潜行暗哨)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="warrior">⚔️ 沙场骁勇 (力量首选 · 绑定战士 · 武将/近战肉搏)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="balanced">⚖️ 凡人百态 (均衡分派 · 绑定战士/平民 · 普通人的一生)</button>
+            </div>
+          </div>
+
+          <!-- 第四层：司命星宿指路 · 门派契合天梯榜 -->
+          <div class="class-recommend-panel hidden" id="class-recommend-panel">
+            <div class="recommend-title-row">
+              <h4>★ 司命星宿指路 · 门派契合推荐榜 ★</h4>
+              <span class="badge badge-gold">根据当前点数池深度诊断</span>
+            </div>
+            <div class="recommend-cards-container" id="recommend-cards-container">
+              <!-- 动态渲染最契合门派并支持一键采纳 -->
+            </div>
+          </div>
+
+          <!-- 第五层：单人独行跑团避坑锦囊 -->
           <div class="solo-survival-card">
             <div class="solo-card-header">
               <span class="gold-text">🛡️ 单人独行生存锦囊：</span>
@@ -423,36 +476,6 @@
               <li><strong>自由点数池</strong>：摇出的 6 个数字无需绑死，只需把大点数给核心命脉，剩下 1~2 个低分哪怕是 7~8 也完全无伤大雅！</li>
               <li><strong>单兵流派推荐</strong>：战系（战士/野蛮人/圣武士）重甲容错最高；游侠万金油带战宠；游荡者善匿机变。</li>
             </ul>
-          </div>
-
-          <!-- 司命星宿指路：门派契合天梯榜 -->
-          <div class="class-recommend-panel hidden" id="class-recommend-panel">
-            <div class="recommend-title-row">
-              <h4>★ 司命星宿指路 · 门派契合推荐榜 ★</h4>
-              <span class="badge badge-gold">根据当前点数池深度诊断</span>
-            </div>
-            <div class="recommend-cards-container" id="recommend-cards-container">
-              <!-- 动态渲染 2~3 个最契合的职业及一键归位按钮 -->
-            </div>
-          </div>
-
-          <!-- 全题材/流派一键配点锦囊 (破除力量最高偏见) -->
-          <div class="archetype-presets-panel hidden" id="archetype-presets-panel">
-            <div class="presets-header">
-              <span class="gold-text">🎯 一键志向与流派配点：</span>
-              <small>彻底破除力量最高偏见，依您想玩的人生志向一键分配天命大点！</small>
-            </div>
-            <div class="presets-btn-row">
-              <button class="btn btn-silver btn-small preset-btn" data-preset="scholar">🎓 文曲博学 (智力首选 · 考清华/学霸/谋士)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="noble">👑 倾城名流 (魅力首选 · 宠妃/做老板/社交经商)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="artisan">🍳 巧手神匠 (敏捷首选 · 神厨/潜行暗哨/手工艺)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="warrior">⚔️ 沙场骁勇 (力量首选 · 武将/近战冲锋/硬汉)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="balanced">⚖️ 凡人百态 (均衡分派 · 普通人的一生)</button>
-            </div>
-          </div>
-
-          <div class="ability-assignment-grid" id="ability-assignment-grid">
-            <!-- 动态生成 6 组下拉槽位 -->
           </div>
         </div>
 
@@ -624,6 +647,69 @@
     </div>
   </div>
 
+  <!-- 模态框 4：随身行囊与装备全景宝匣 (支持一键使用道具) -->
+  <div class="modal-overlay hidden" id="modal-inventory">
+    <div class="modal-window inventory-window">
+      <div class="modal-header">
+        <div class="inv-header-title">
+          <h3>🎒 行者行囊 · 穿戴与百宝箱</h3>
+          <span class="badge badge-gold" id="inv-weight-badge">负重: 轻载 (28/66 磅)</span>
+        </div>
+        <div class="inv-header-wallet">
+          <span>随身资财：</span>
+          <strong class="gold-text" id="inv-modal-wallet">150 GP</strong>
+        </div>
+        <button class="btn-close-modal" id="btn-close-inventory">✕</button>
+      </div>
+
+      <div class="modal-body inv-body scrollable">
+        <!-- 穿戴槽位区 -->
+        <div class="inv-equipped-section">
+          <h4>⚔️ 当前佩带与身披装具</h4>
+          <div class="equipped-slots-grid">
+            <div class="equipped-slot-card">
+              <span class="slot-type-tag">主手兵刃</span>
+              <div class="slot-item-info">
+                <strong id="equipped-weapon-name">长剑</strong>
+                <small id="equipped-weapon-stats">1d8 挥砍 · 暴击 19-20/x2 · 重 4 磅</small>
+              </div>
+            </div>
+            <div class="equipped-slot-card">
+              <span class="slot-type-tag">身披甲胄</span>
+              <div class="slot-item-info">
+                <strong id="equipped-armor-name">链甲衫</strong>
+                <small id="equipped-armor-stats">AC+4 · 最大敏捷+4 · 穿甲检定-2 · 重 25 磅</small>
+              </div>
+            </div>
+            <div class="equipped-slot-card">
+              <span class="slot-type-tag">副手/防具</span>
+              <div class="slot-item-info">
+                <strong id="equipped-shield-name">无</strong>
+                <small id="equipped-shield-stats">可前往市集货栈采办木盾或重盾</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 背包收纳道具明细 -->
+        <div class="inv-items-section">
+          <div class="section-title-row">
+            <h4>📦 行囊收纳道具明细</h4>
+            <span class="badge badge-dim">点击【🎯 声明使用】直接代入剧情对白</span>
+          </div>
+          <div class="inv-items-list" id="inv-items-list">
+            <!-- 动态渲染道具条目，含数量徽章与使用按钮 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer inv-footer">
+        <small class="inv-footer-hint">提示：点击【🎯 声明使用】将自动收起行囊并填入对话框，发送后自动扣除行囊库存并触发司命推演！</small>
+        <button class="btn btn-silver" id="btn-done-inventory">收拾妥当 · 关闭行囊</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 投骰动画与结算遮罩 -->
   <div class="dice-overlay hidden" id="overlay-dice">
     <div class="dice-stage">
@@ -645,6 +731,6 @@
   </div>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_10"></script>
+  <script src="app.js?v=20261017_11"></script>
 </body>
 </html>
