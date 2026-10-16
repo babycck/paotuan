@@ -186,20 +186,24 @@
           </div>
         </section>
 
-        <!-- 佩兵与致命重击 -->
-        <section class="card weapon-card">
+        <!-- 随身资财与市集货栈采办 -->
+        <section class="card market-trigger-card">
           <div class="section-title-row">
-            <h4>佩刃兵戈</h4>
-            <span class="weapon-threat-badge" id="weapon-threat-badge">19-20 / ×2 重击</span>
+            <h4>随身资财与货栈</h4>
+            <span class="market-status-badge active" id="market-status-badge">● 安全采办点</span>
           </div>
-          <div class="weapon-info">
-            <div class="weapon-name" id="weapon-name">精工长剑</div>
-            <div class="weapon-stats">
-              <span>攻击加值：<strong id="weapon-ab">+3</strong></span>
-              <span>伤害：<strong id="weapon-damage">1d8+2</strong> (<span id="weapon-type">挥砍</span>)</span>
+          <div class="currency-display-box">
+            <div class="currency-main">
+              <span class="currency-icon">💰</span>
+              <span class="currency-label">囊中资财：</span>
+              <strong class="currency-amount gold-text" id="display-currency">150 GP</strong>
             </div>
+            <small class="currency-sub" id="display-currency-sub">折合 1500 银两 / 现金</small>
           </div>
-          <button class="btn btn-gold btn-block" id="btn-roll-weapon">⚔️ 兵刃挥斩检定</button>
+          <button class="btn btn-gold btn-block btn-open-market" id="btn-open-market">
+            <span class="btn-icon">🛒</span>
+            <span>市集采办 · 货栈商铺</span>
+          </button>
         </section>
 
         <!-- 背景特性与专长 -->
@@ -536,6 +540,39 @@
       <div class="modal-footer">
         <button class="btn btn-silver" id="btn-test-api">🔗 连通性测试</button>
         <button class="btn btn-gold" id="btn-save-settings">保存心印配置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 3：行商大集 · 万象货栈商铺 -->
+  <div class="modal-overlay hidden" id="modal-market">
+    <div class="modal-window market-window">
+      <div class="modal-header">
+        <div class="market-header-title">
+          <h3>🛒 行商大集 · 万象货栈</h3>
+          <span class="badge badge-gold">安全采办点</span>
+        </div>
+        <div class="market-header-wallet">
+          <span>可用资财：</span>
+          <strong class="gold-text" id="market-wallet-amount">150 GP</strong>
+        </div>
+        <button class="btn-close-modal" id="btn-close-market">✕</button>
+      </div>
+      <div class="market-tabs-row">
+        <button class="market-tab-btn active" data-cat="all">全部物资</button>
+        <button class="market-tab-btn" data-cat="weapon">⚔️ 兵刃武器</button>
+        <button class="market-tab-btn" data-cat="armor">🛡️ 防具护甲</button>
+        <button class="market-tab-btn" data-cat="gear">🎒 探险与生活道具</button>
+        <button class="market-tab-btn" data-cat="potion">🧪 灵药与急救</button>
+      </div>
+      <div class="modal-body market-body scrollable">
+        <div class="market-items-grid" id="market-items-grid">
+          <!-- 动态渲染货栈商品卡片 -->
+        </div>
+      </div>
+      <div class="modal-footer market-footer">
+        <small class="market-footer-hint">购买物品将自动扣除对应银钱资财，并实时联动增加至行囊负重中。</small>
+        <button class="btn btn-silver" id="btn-done-market">采办完毕 · 离开货栈</button>
       </div>
     </div>
   </div>

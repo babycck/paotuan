@@ -372,7 +372,13 @@ const state = {
       damageType: "挥砍",
       attackBonus: 3
     },
-    load: { current: 35, lightMax: 66, medMax: 133, heavyMax: 200, status: "轻载" }
+    load: { current: 35, lightMax: 66, medMax: 133, heavyMax: 200, status: "轻载" },
+    currency: 150, // 初始随身资财 150 GP (可自适应兑换银两/现金)
+    inventory: [
+      { name: "精工长剑", category: "weapon", price: 15, weight: 4, desc: "1d8伤害, 19-20/×2" },
+      { name: "精工链甲衫", category: "armor", price: 100, weight: 25, desc: "AC +4, ACP -1" },
+      { name: "探险者背包", category: "gear", price: 2, weight: 2, desc: "随身装具" }
+    ]
   },
 
   // 当前世界观题材 (待玩家自由定夺)
@@ -500,15 +506,26 @@ function renderTacticalPanel() {
   document.getElementById("save-ref").textContent = fmtMod(c.saves.ref);
   document.getElementById("save-will").textContent = fmtMod(c.saves.will);
 
-  // 武器与致命重击
-  document.getElementById("weapon-name").textContent = c.weapon.name;
-  document.getElementById("weapon-ab").textContent = fmtMod(c.weapon.attackBonus);
-  const strMod = calcMod(c.abilities.STR);
-  document.getElementById("weapon-damage").textContent = `${c.weapon.damageDice}${fmtMod(strMod)}`;
+  // 随身资财与货栈状态
+  const currElem = document.getElementById("display-currency");
+  if (currElem) currElem.textContent = `${c.currency ?? 150} GP`;
+  const currSubElem = document.getElementById("display-currency-sub");
+  if (currSubElem) currSubElem.textContent = `折合 ${(c.currency ?? 150) * 10} 银两 / 现金`;
+
+  // 武器与致命重击 (安全容错)
+  const wepName = document.getElementById("weapon-name");
+  if (wepName && c.weapon) wepName.textContent = c.weapon.name;
+  const wepAb = document.getElementById("weapon-ab");
+  if (wepAb && c.weapon) wepAb.textContent = fmtMod(c.weapon.attackBonus);
+  const wepDmg = document.getElementById("weapon-damage");
+  if (wepDmg && c.weapon) {
+    const strMod = calcMod(c.abilities.STR);
+    wepDmg.textContent = `${c.weapon.damageDice}${fmtMod(strMod)}`;
+  }
   const weaponTypeElem = document.getElementById("weapon-type");
-  if (weaponTypeElem) weaponTypeElem.textContent = c.weapon.damageType || "挥砍";
+  if (weaponTypeElem && c.weapon) weaponTypeElem.textContent = c.weapon.damageType || "挥砍";
   const threatBadge = document.getElementById("weapon-threat-badge");
-  if (threatBadge) {
+  if (threatBadge && c.weapon) {
     const tr = c.weapon.threatRange || [19, 20];
     const trStr = tr.length > 1 ? `${tr[0]}-${tr[tr.length - 1]}` : `${tr[0]}`;
     threatBadge.textContent = `${trStr} / ×${c.weapon.critMultiplier || 2} 重击`;
@@ -1541,6 +1558,140 @@ function initSettingsModal() {
   }
 }
 
+// =========================================================
+// 9.1 行商大集 · 万象货栈商铺系统 (Marketplace Controller)
+// =========================================================
+
+const MARKET_CATALOG = [
+  // ⚔️ 兵刃武器 (按 PF1e 核心装备规范)
+  { id: "w_dagger", name: "精工匕首", category: "weapon", price: 2, weight: 1, stats: "1d4 (19-20/×2)", desc: "轻巧锋利，易于隐匿携带，近战刺击或投掷皆宜。" },
+  { id: "w_sword", name: "精工长剑", category: "weapon", price: 15, weight: 4, stats: "1d8 (19-20/×2)", desc: "开刃雪亮，重心平衡极佳的单手百兵之君。" },
+  { id: "w_shortbow", name: "猎手短弓与箭囊", category: "weapon", price: 30, weight: 2, stats: "1d6 (×3)", desc: "配有20支鸣镝长箭，远距离狙杀与荒野涉猎利器。" },
+  { id: "w_greatsword", name: "淬火斩马重剑", category: "weapon", price: 50, weight: 8, stats: "2d6 (19-20/×2)", desc: "双手重型破阵巨兵，力拔山兮气盖世。" },
+  { id: "w_revolver", name: "精制钢轮转左轮", category: "weapon", price: 150, weight: 3, stats: "1d8 (×4)", desc: "现代/火器自卫兵刃，近距离穿透极强。" },
+
+  // 🛡️ 防具护甲
+  { id: "a_leather", name: "熟鞣硬皮甲", category: "armor", price: 10, weight: 15, stats: "AC +2 (ACP 0)", desc: "柔韧坚韧，完全不影响特技翻滚与隐匿行动。" },
+  { id: "a_chainshirt", name: "精工锁子链甲衫", category: "armor", price: 100, weight: 25, stats: "AC +4 (ACP -1)", desc: "密织细钢环覆于锦袍之下，防护与灵巧兼具。" },
+  { id: "a_breastplate", name: "锻打熟铁胸甲", category: "armor", price: 200, weight: 30, stats: "AC +6 (ACP -3)", desc: "整体冲压钢板护住前后要害，箭矢难伤。" },
+  { id: "a_shield", name: "镶铜重钢方盾", category: "armor", price: 20, weight: 15, stats: "AC +2 (ACP -2)", desc: "立于身前坚不可摧，抵挡飞矢与重击。" },
+
+  // 🎒 探险与生活道具
+  { id: "g_backpack", name: "结实粗帆布行囊", category: "gear", price: 2, weight: 2, stats: "行囊容积 30磅", desc: "双肩背负，分层清晰耐磨防水。" },
+  { id: "g_rope", name: "特制浸油细麻绳 (50尺)", category: "gear", price: 1, weight: 10, stats: "承重 500磅", desc: "攀爬悬崖、捆绑俘虏与扎营必备。" },
+  { id: "g_torch", name: "树脂火把 (3支装)", category: "gear", price: 1, weight: 3, stats: "照亮 20尺", desc: "风雨不熄，提供长达数个时辰的黑暗洞穴照明。" },
+  { id: "g_rations", name: "高能干粮行军袋", category: "gear", price: 5, weight: 7, stats: "7日份给养", desc: "肉干、炒面与耐存放硬饼，果腹充饥防虚脱。" },
+  { id: "g_tools", name: "精密机关锁具暗撬套组", category: "gear", price: 30, weight: 1, stats: "解除装置 +2", desc: "精钢探针与回旋扳子，游荡者与破局神兵。" },
+  { id: "g_notebook", name: "硬皮记事薄与炭精笔", category: "gear", price: 2, weight: 1, stats: "文具/情报", desc: "高考攻坚计算或地下潜伏记录暗号密码。" },
+
+  // 🧪 灵药与急救
+  { id: "p_heal", name: "朱砂提气九转还魂露", category: "potion", price: 50, weight: 0.5, stats: "恢复 1d8+1 HP", desc: "纯阳灵药，饮下后迅速止血生肌，抚平创伤。" },
+  { id: "p_antidote", name: "雪魄辟毒散", category: "potion", price: 50, weight: 0.5, stats: "强韧豁免 +5", desc: "含于舌下可化解百般瘴气与烈性暗毒。" },
+  { id: "p_bandage", name: "无菌急救创伤绷带包", category: "potion", price: 10, weight: 1, stats: "医疗检定 +2", desc: "迅速压迫止血包扎，防止失血休克。" }
+];
+
+function initMarketplaceModal() {
+  const modal = document.getElementById("modal-market");
+  const btnOpen = document.getElementById("btn-open-market");
+  const btnClose = document.getElementById("btn-close-market");
+  const btnDone = document.getElementById("btn-done-market");
+  const walletElem = document.getElementById("market-wallet-amount");
+  const itemsContainer = document.getElementById("market-items-grid");
+
+  let currentCategory = "all";
+
+  function refreshMarket() {
+    if (state.character.currency === undefined || state.character.currency === null) {
+      state.character.currency = 150;
+    }
+    const currStr = `${state.character.currency} GP`;
+    if (walletElem) walletElem.textContent = currStr;
+    const dispCurr = document.getElementById("display-currency");
+    if (dispCurr) dispCurr.textContent = currStr;
+    const dispSub = document.getElementById("display-currency-sub");
+    if (dispSub) dispSub.textContent = `折合 ${state.character.currency * 10} 银两 / 现金`;
+
+    renderMarketItems(currentCategory);
+  }
+
+  function renderMarketItems(cat) {
+    if (!itemsContainer) return;
+    itemsContainer.innerHTML = "";
+
+    const filtered = (cat === "all") ? MARKET_CATALOG : MARKET_CATALOG.filter(it => it.category === cat);
+
+    filtered.forEach(it => {
+      const card = document.createElement("div");
+      card.className = "market-item-card";
+      card.innerHTML = `
+        <div class="market-item-top">
+          <span class="market-item-name">${it.name}</span>
+          <span class="market-item-price">${it.price} GP</span>
+        </div>
+        <div class="market-item-stats">${it.stats} · 重 ${it.weight} 磅</div>
+        <div class="market-item-desc">${it.desc}</div>
+        <button class="btn btn-gold btn-buy-item">购入此物 (${it.price} GP)</button>
+      `;
+
+      card.querySelector(".btn-buy-item").onclick = () => {
+        if (state.character.currency < it.price) {
+          audio.playAlert();
+          alert(`囊中资财不足！当前可用 ${state.character.currency} GP，购入【${it.name}】需 ${it.price} GP。`);
+          return;
+        }
+
+        // 扣除货币
+        state.character.currency -= it.price;
+        if (!state.character.inventory) state.character.inventory = [];
+        state.character.inventory.push({ ...it });
+
+        // 如果购买的是武器且玩家需要更新
+        if (it.category === "weapon" && (!state.character.weapon || confirm(`已购入【${it.name}】，是否将其设为当前主要佩兵？`))) {
+          state.character.weapon.name = it.name;
+        }
+
+        // 重新计算并联动负重
+        if (!state.character.load) state.character.load = { current: 35, lightMax: 66, medMax: 133, heavyMax: 200, status: "轻载" };
+        state.character.load.current = Math.round((state.character.load.current + it.weight) * 10) / 10;
+        const limits = getLoadThresholds(state.character.abilities.STR, "中型");
+        state.character.load.lightMax = limits.light;
+        state.character.load.medMax = limits.medium;
+        state.character.load.heavyMax = limits.heavy;
+        if (state.character.load.current <= limits.light) state.character.load.status = "轻载";
+        else if (state.character.load.current <= limits.medium) state.character.load.status = "中载";
+        else state.character.load.status = "重载";
+
+        renderTacticalPanel();
+        refreshMarket();
+        audio.playNat20();
+        alert(`采办成功！成功购入【${it.name}】，消耗 ${it.price} GP。物品已存入行囊，负重增至 ${state.character.load.current} 磅！`);
+        saveGameToServer();
+      };
+
+      itemsContainer.appendChild(card);
+    });
+  }
+
+  if (btnOpen) {
+    btnOpen.onclick = () => {
+      modal.classList.remove("hidden");
+      refreshMarket();
+    };
+  }
+  if (btnClose) btnClose.onclick = () => modal.classList.add("hidden");
+  if (btnDone) btnDone.onclick = () => modal.classList.add("hidden");
+
+  // Tab 切换
+  document.querySelectorAll(".market-tab-btn").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".market-tab-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentCategory = btn.getAttribute("data-cat");
+      renderMarketItems(currentCategory);
+    };
+  });
+}
+
 async function saveGameToServer() {
   try {
     const payload = {
@@ -1689,45 +1840,8 @@ document.addEventListener("DOMContentLoaded", () => {
     appendNarrativeEntry("assistant", `【变卦心决】：你权衡凶险，决意放弃原定行动，未曾掷骰，亦无损耗。你定住心神，暂避锋芒，可另谋破局生路。\n\n你接下来要干嘛？`);
   };
 
-  // 6. 快捷兵刃挥斩宏 (支持 19-20 重击威胁与自动确重判定)
-  document.getElementById("btn-roll-weapon").onclick = () => {
-    const c = state.character;
-    const ab = c.weapon.attackBonus || 0;
-    const strMod = calcMod(c.abilities.STR);
-    const threatRange = c.weapon.threatRange || [19, 20];
-    const dmgType = c.weapon.damageType || "挥砍";
-
-    performDiceRoll(c.weapon.name + " 攻击", ab, 15, (res) => {
-      let isThreat = threatRange.includes(res.d20);
-
-      if (isThreat) {
-        // 触发致命重击威胁，自动执行二次确重投骰
-        const confirmD20 = Math.floor(Math.random() * 20) + 1;
-        const confirmTotal = confirmD20 + ab;
-        const confirmSuccess = confirmTotal >= 15;
-
-        if (confirmSuccess) {
-          audio.playNat20();
-          const baseDmg1 = Math.floor(Math.random() * 8) + 1;
-          const baseDmg2 = Math.floor(Math.random() * 8) + 1;
-          const totalCritDmg = baseDmg1 + baseDmg2 + strMod * 2;
-          const critMsg = `我拔出腰间【${c.weapon.name}】，凌厉斩击而出！\n【首击命中】：出目 D20 (${res.d20}) + 命中加值 ${fmtMod(ab)} = ${res.total}（触发 ${threatRange[0]}-${threatRange[threatRange.length - 1]} 致命重击威胁！）\n【确重投骰】：出目 D20 (${confirmD20}) + ${fmtMod(ab)} = ${confirmTotal} vs DC 15 —— ★【致命重击确认成功 (Critical Hit Confirmed)】★！\n造成 ×2 致命破坏伤害：2d8 (${baseDmg1}+${baseDmg2}) + 力量双倍加值 (${strMod * 2}) = 【${totalCritDmg} 点${dmgType}伤害】！`;
-          sendPlayerAction(critMsg);
-        } else {
-          const dmg = Math.floor(Math.random() * 8) + 1 + strMod;
-          const normalMsg = `我拔出腰间【${c.weapon.name}】，凌厉斩击而出！\n【首击命中】：出目 D20 (${res.d20}) + 命中加值 ${fmtMod(ab)} = ${res.total}（触发重击威胁，但确重投骰 D20(${confirmD20})+${fmtMod(ab)}=${confirmTotal} 未能达成重击）。\n造成普通破坏伤害：1d8+${strMod} = 【${dmg} 点${dmgType}伤害】！`;
-          sendPlayerAction(normalMsg);
-        }
-      } else if (res.d20 === 1) {
-        audio.playNat1();
-        sendPlayerAction(`我拔出腰间【${c.weapon.name}】仓促挥击！[出目 D20 (1) ☠ 绝境大失误 (Natural 1) ☠！剑刃脱手击空磕在坚石上，火星迸溅，腕骨震颤麻木！]`);
-      } else {
-        const dmg = Math.floor(Math.random() * 8) + 1 + strMod;
-        const hitResult = res.total >= 15 ? `【精准命中】造成伤害 1d8+${strMod} = 【${dmg} 点${dmgType}伤害】！` : `【挥击偏斜】未能穿透目标坚甲防备。`;
-        sendPlayerAction(`我拔出腰间【${c.weapon.name}】，凌厉斩击而出！[出目 D20 (${res.d20}) + 命中加值 ${fmtMod(ab)} = 命中值 ${res.total} vs 预估防备 AC 15 —— ${hitResult}]`);
-      }
-    });
-  };
+  // 6. 初始化行商大集 · 万象货栈模态框 (替代生硬的兵刃挥斩宏)
+  initMarketplaceModal();
 
   // 7. 顶部封存与读取档案按钮
   document.getElementById("btn-save").onclick = async () => {
