@@ -2454,6 +2454,108 @@ html, body {
   }
 }
 
+/* 纯净天命出目池 (Dice Pool Chips) */
+.dice-pool-container {
+  background: rgba(20, 24, 33, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0 16px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+.dice-pool-header {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dice-pool-chips {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dice-chip {
+  background: linear-gradient(135deg, rgba(35, 40, 55, 0.95), rgba(20, 24, 35, 0.95));
+  border: 1px solid #d4af37;
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: #f6d365;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
+  transition: all 0.2s ease;
+}
+.dice-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+}
+.dice-chip .chip-dice-icon {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+/* 技能规则详查模态框 (Skill Detail Window) */
+.skill-detail-window {
+  max-width: 520px;
+  width: 90%;
+  background: #181d28;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+}
+.skill-detail-card {
+  padding: 16px;
+  line-height: 1.6;
+}
+.sk-badge-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.sk-rule-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-left: 3px solid #d4af37;
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  font-size: 0.92rem;
+  color: #e2e8f0;
+}
+.sk-calc-breakdown {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+}
+.sk-calc-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.sk-calc-breakdown td {
+  padding: 4px 0;
+  color: #a0aec0;
+}
+.sk-calc-breakdown td.val {
+  text-align: right;
+  font-weight: bold;
+  color: #edf2f7;
+}
+.sk-calc-total-row {
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  font-weight: bold;
+  font-size: 1rem;
+}
+.sk-calc-total-row td {
+  color: #f6d365 !important;
+  padding-top: 8px !important;
+}
+
 
 
 

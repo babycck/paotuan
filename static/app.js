@@ -1306,7 +1306,7 @@ function initCharacterWizard() {
   };
   btnClose.onclick = () => wizardModal.classList.add("hidden");
 
-  // Step 1: 4d6k3 摇骰
+  // Step 1: 4d6k3 摇骰 (摇出 6 组纯净点数池，不预设任何属性)
   document.getElementById("btn-roll-4d6k3").onclick = () => {
     audio.playDiceRoll();
     const scores = [];
@@ -1316,10 +1316,24 @@ function initCharacterWizard() {
       const sum = rolls[0] + rolls[1] + rolls[2];
       scores.push(sum);
     }
+    // 降序排列天道出目
     state.wizard.rolledScores = scores.sort((a, b) => b - a);
 
-    // 智能依据当前世界观题材初选志向（彻底破除无脑塞给力量最高的偏见）
-    let defaultPreset = "balanced";
+    // 1. 呈现纯净天道出目池筹码 (100% 纯点数，不带属性偏见)
+    const poolBox = document.getElementById("dice-pool-container");
+    const chipsBox = document.getElementById("dice-pool-chips");
+    if (poolBox && chipsBox) {
+      poolBox.classList.remove("hidden");
+      chipsBox.innerHTML = state.wizard.rolledScores.map(score => `
+        <div class="dice-chip">
+          <span class="chip-dice-icon">🎲</span>
+          <span class="chip-num">${score}</span>
+        </div>
+      `).join("");
+    }
+
+    // 2. 依据当前世界观题材初选志向流派
+    let defaultPreset = "warrior";
     const theme = (state.theme || "").toLowerCase();
     if (/考|清华|学|题|谋|文|书|策|智/.test(theme)) {
       defaultPreset = "scholar";
@@ -1329,12 +1343,14 @@ function initCharacterWizard() {
       defaultPreset = "artisan";
     } else if (/战|杀|武|砍|霸|士|军/.test(theme)) {
       defaultPreset = "warrior";
+    } else {
+      defaultPreset = "balanced";
     }
 
+    // 3. 初始化六维槽位与志向面板，将纯点数池依据志向流向六维，并联动门派
     renderAbilityAssignmentGrid();
     initArchetypePresets();
     applyArchetypePreset(defaultPreset);
-    renderClassRecommendations(state.wizard.rolledScores);
   };
 
   // 切换步骤
@@ -2354,7 +2370,7 @@ function renderSkillsMatrix() {
 
     const btn = document.createElement("button");
     btn.className = `skill-matrix-btn ${isClass && ranks > 0 ? 'is-class-trained' : ''} ${hasPenalty ? 'has-penalty' : ''}`;
-    btn.title = `【${sk.name}】(${sk.attr})\n${bonusInfo.detail}\n点击直接带加值投骰对抗！`;
+    btn.title = `【${sk.name}】(${sk.attr})\n点击查阅技能详细规则与加值构成！`;
 
     const icon = SKILL_ICONS[sk.name] || "🎯";
     let displayName = sk.name.replace("知识(", "").replace(")", "知");
@@ -2365,15 +2381,109 @@ function renderSkillsMatrix() {
       <span class="sk-mod">${fmtMod(bonusInfo.bonus)}</span>
     `;
 
+    // 关键改造：点击绝不直接投骰！而是安全打开技能规则详查卡片，查看用途后再决定是否投骰
     btn.onclick = () => {
+      openSkillDetailModal(sk, bonusInfo, icon);
+    };
+
+    container.appendChild(btn);
+  });
+}
+
+// 技能详细规则与用途字典
+const SKILL_RULES_DESC = {
+  "特技": "用于在狭窄表面走独木桥、贴地翻滚穿过敌人借机威胁区、减免高处坠落伤害等。",
+  "估价": "用于鉴定古董珠宝、宝物真实价值与品质，识别赝品与真品。",
+  "唬骗": "用于说谎、佯攻欺敌、传递暗号、隐瞒真实意图与假传军情。",
+  "攀爬": "用于攀登陡峭岩壁、城墙、树木或沿绳索垂直行进。",
+  "交涉": "用于以理服人、平息干戈、改善NPC态度、谈判议价与结交盟友。",
+  "解除装置": "用于解除复杂机关、拆除致命陷阱、开锁破门（受训专属技能）。",
+  "伪装": "用于易容改扮、乔装潜伏、改换身份与避人耳目。",
+  "脱逃": "用于从绳索捆绑、手铐镣铐或敌人的擒抱压制中挣脱逃生。",
+  "飞行": "用于在空中振翅滑翔或受法术飞行时的空中机动与对抗气流。",
+  "驯养动物": "用于驯服野兽、指挥战宠行动、安抚受惊坐骑（受训专属技能）。",
+  "医疗": "用于战地急救稳定濒死者伤势、治疗致命毒伤与疾病护理。",
+  "威吓": "用于以杀气或威势震慑敌胆、逼问口供、令敌方陷入战栗。",
+  "察觉": "用于耳听八方眼观六路、识破潜伏敌人、发现隐藏密门与暗藏陷阱。",
+  "表演": "用于奏乐吟诗、街头卖艺、博取达官显贵好感、唤起群体共鸣。",
+  "骑术": "用于骑马控缰、马上控箭开弓、驾驭战马涉险。",
+  "察言观色": "用于洞察对方面部微表情、识破谎言、感知是否身中惑控法术。",
+  "手上功夫": "用于近身探囊取物(顺手牵羊)、摸尸顺宝、藏匿暗器暗桩(受训专属)。",
+  "辨识法术": "用于辨识敌人正在吟唱的咒诀、鉴定魔法奇物与药水功效(受训专属)。",
+  "隐匿": "用于借阴影潜伏行迹、静步潜行、避开敌方守卫巡查与侦察。",
+  "生存": "用于野外追踪足迹、辨识方向、捕猎取水生火、预测恶劣天候。",
+  "游泳": "用于在汹涌波涛、暗河水潭或激流中泅渡前行。",
+  "使用魔法装置": "用于非本职者跨职业激活法术卷轴、魔杖或充能魔法奇物(受训专属)。"
+};
+
+// 技能规则详查模态框呼出与二次确认投骰
+function openSkillDetailModal(sk, bonusInfo, icon) {
+  const modal = document.getElementById("modal-skill-detail");
+  if (!modal) return;
+
+  const c = state.character;
+  const skData = c?.skills ? c.skills[sk.name] : null;
+  const isClass = !!skData?.isClass;
+  const ranks = skData?.ranks || 0;
+  const attrMod = calcMod(c?.abilities[sk.attr] || 10);
+  const classBonus = (isClass && ranks > 0) ? 3 : 0;
+  const acpPenalty = sk.acp ? (c?.ac?.acp || 0) : 0;
+  const desc = SKILL_RULES_DESC[sk.name] || `${sk.name}相关的探险应对与环境判定。`;
+
+  const titleElem = document.getElementById("skill-detail-title");
+  if (titleElem) titleElem.innerHTML = `${icon} 【${sk.name}】技能规则详查`;
+
+  const bodyElem = document.getElementById("skill-detail-body");
+  if (bodyElem) {
+    bodyElem.innerHTML = `
+      <div class="skill-detail-card">
+        <div class="sk-badge-row">
+          <span class="badge badge-gold">关键属性: ${sk.attr} (${fmtMod(attrMod)})</span>
+          <span class="badge ${isClass ? 'badge-gold' : 'badge-dim'}">${isClass ? '★ 本职技能' : '非本职技能'}</span>
+          <span class="badge ${ranks > 0 ? 'badge-gold' : 'badge-dim'}">投入点数: ${ranks} 级</span>
+          <span class="badge ${sk.acp ? 'badge-danger' : 'badge-dim'}">${sk.acp ? `受甲胄拖累 (ACP ${acpPenalty})` : '不受甲胄拖累'}</span>
+        </div>
+
+        <div class="sk-rule-box">
+          <strong>📖 规则用途与考量：</strong><br>
+          ${desc}
+        </div>
+
+        <div class="sk-calc-breakdown">
+          <div style="font-weight:bold; color:#d4af37; margin-bottom:6px;">📊 检定修正值计算公式明细：</div>
+          <table>
+            <tr><td>关键属性调整值 (${sk.attr}):</td><td class="val">${fmtMod(attrMod)}</td></tr>
+            <tr><td>技能投入级数 (Ranks):</td><td class="val">+${ranks}</td></tr>
+            <tr><td>本职受训加值 (本职且点数>0):</td><td class="val">+${classBonus}</td></tr>
+            ${sk.acp && acpPenalty < 0 ? `<tr><td>防具穿甲减值扣减 (ACP):</td><td class="val" style="color:#f56565;">${acpPenalty}</td></tr>` : ''}
+            <tr class="sk-calc-total-row"><td>终道检定总加值:</td><td class="val">${fmtMod(bonusInfo.bonus)}</td></tr>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  modal.classList.remove("hidden");
+  audio.playAlert();
+
+  const btnClose = document.getElementById("btn-close-skill-detail");
+  const btnCancel = document.getElementById("btn-cancel-skill-roll");
+  const btnConfirm = document.getElementById("btn-confirm-skill-roll");
+
+  const closeModal = () => modal.classList.add("hidden");
+  if (btnClose) btnClose.onclick = closeModal;
+  if (btnCancel) btnCancel.onclick = closeModal;
+
+  // 唯有玩家明确点击“确认检定”时才投骰！
+  if (btnConfirm) {
+    btnConfirm.onclick = () => {
+      closeModal();
       performDiceRoll(`${sk.name}检定`, bonusInfo.bonus, 12, (result) => {
         const sendText = `【玩家主动发起 · ${sk.name}检定】：投出 D20 (${result.d20}) + 修正总加值 (${fmtMod(result.bonus)}) [${bonusInfo.detail}] = 终值 ${result.total}（请司命依此推演判定后果与局势变化）`;
         sendPlayerAction(sendText);
       });
     };
-
-    container.appendChild(btn);
-  });
+  }
 }
 
 // =========================================================

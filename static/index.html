@@ -451,35 +451,46 @@
 
           <div class="roll-trigger-area">
             <button class="btn btn-gold btn-large" id="btn-roll-4d6k3">
-              🎲 天道摇骰 (一键摇取六维)
+              🎲 天道摇骰 (摇取6组纯净点数池)
             </button>
           </div>
 
-          <!-- 第二层：六维属性分配槽位 -->
+          <!-- 第一层：纯净天命出目池 (不预设任何属性) -->
+          <div class="dice-pool-container hidden" id="dice-pool-container">
+            <div class="dice-pool-header">
+              <span class="gold-text">🎲 天道灵韵出目池 (6组纯数，不带任何属性偏见)：</span>
+              <small>请选择下方志向一键分配，或直接手动调换六维</small>
+            </div>
+            <div class="dice-pool-chips" id="dice-pool-chips">
+              <!-- 动态呈现 6 个发光点数筹码 -->
+            </div>
+          </div>
+
+          <!-- 第二层：全题材/流派一键志向配点锦囊 (点击直接把点数流向六维，并联动门派) -->
+          <div class="archetype-presets-panel hidden" id="archetype-presets-panel">
+            <div class="presets-header">
+              <span class="gold-text">🎯 选择你的行者志向与流派配点：</span>
+              <small>点击心仪志向，上方点数池将瞬间注入六维，并为您推荐契合门派！</small>
+            </div>
+            <div class="presets-btn-row">
+              <button class="btn btn-silver btn-small preset-btn" data-preset="scholar">🎓 文曲博学 (智力首选 · 契合法师/策士 · 考学研究)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="noble">👑 倾城名流 (魅力首选 · 契合术士/领袖 · 社交谈判)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="artisan">🍳 巧手神匠 (敏捷首选 · 契合游荡者 · 盗贼神厨暗哨)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="warrior">⚔️ 沙场骁勇 (力量首选 · 契合战士/猛将 · 刀剑肉搏)</button>
+              <button class="btn btn-silver btn-small preset-btn" data-preset="balanced">⚖️ 凡人百态 (均衡分派 · 契合游侠/平民 · 扎实稳健)</button>
+            </div>
+          </div>
+
+          <!-- 第三层：六维属性归位槽位 (展示点数流向，支持自由微调) -->
           <div class="ability-assignment-grid" id="ability-assignment-grid">
             <!-- 动态生成 6 组下拉槽位 -->
           </div>
 
-          <!-- 第三层：全题材/流派一键志向配点锦囊 (点击直接联动选定门派职业) -->
-          <div class="archetype-presets-panel hidden" id="archetype-presets-panel">
-            <div class="presets-header">
-              <span class="gold-text">🎯 一键志向与流派配点：</span>
-              <small>选定志向后不仅六维大点精准归位，系统亦将自动为您选定门派职业！</small>
-            </div>
-            <div class="presets-btn-row">
-              <button class="btn btn-silver btn-small preset-btn" data-preset="scholar">🎓 文曲博学 (智力首选 · 绑定法师/学士 · 考清华/学霸)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="noble">👑 倾城名流 (魅力首选 · 绑定吟游诗人 · 宠妃/经商老板)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="artisan">🍳 巧手神匠 (敏捷首选 · 绑定游荡者 · 神厨/潜行暗哨)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="warrior">⚔️ 沙场骁勇 (力量首选 · 绑定战士 · 武将/近战肉搏)</button>
-              <button class="btn btn-silver btn-small preset-btn" data-preset="balanced">⚖️ 凡人百态 (均衡分派 · 绑定战士/平民 · 普通人的一生)</button>
-            </div>
-          </div>
-
-          <!-- 第四层：司命星宿指路 · 门派契合天梯榜 -->
+          <!-- 第四层：司命星宿指路 · 门派契合推荐榜 -->
           <div class="class-recommend-panel hidden" id="class-recommend-panel">
             <div class="recommend-title-row">
               <h4>★ 司命星宿指路 · 门派契合推荐榜 ★</h4>
-              <span class="badge badge-gold">根据当前点数池深度诊断</span>
+              <span class="badge badge-gold">根据当前点数池与志向深度诊断</span>
             </div>
             <div class="recommend-cards-container" id="recommend-cards-container">
               <!-- 动态渲染最契合门派并支持一键采纳 -->
@@ -843,7 +854,24 @@
     </div>
   </div>
 
+  <!-- 模态框 8：技能规则详查与投骰二次确认卡片 (绝不误触直接投骰) -->
+  <div class="modal-overlay hidden" id="modal-skill-detail">
+    <div class="modal-window skill-detail-window">
+      <div class="modal-header">
+        <h3 id="skill-detail-title">📖 技能规则详查</h3>
+        <button class="btn-close-modal" id="btn-close-skill-detail">✕</button>
+      </div>
+      <div class="modal-body" id="skill-detail-body">
+        <!-- 动态生成技能属性、规则说明、ACP惩罚、加值明细 -->
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button class="btn btn-silver" id="btn-cancel-skill-roll">✕ 仅查阅关闭</button>
+        <button class="btn btn-gold" id="btn-confirm-skill-roll">🎲 确认以此技能检定</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_16"></script>
+  <script src="app.js?v=20261017_17"></script>
 </body>
 </html>
