@@ -3121,6 +3121,137 @@ const CLASS_SPELL_PRESETS = {
   }
 };
 
+// 异步预载项目内置纯正 CRB 核心真典
+async function loadCrbCatalog() {
+  if (state.crbCatalog) return state.crbCatalog;
+  try {
+    const res = await fetch("/api/rules/crb_catalog");
+    const data = await res.json();
+    if (data && data.actions) {
+      state.crbCatalog = data;
+    }
+  } catch (e) {
+    console.warn("加载 CRB 核心典籍失败，启用前端离线应急备用:", e);
+  }
+  return state.crbCatalog;
+}
+
+// 秘术与战技权威规则详查与二次确认弹窗 (绝不盲点盲选，看清说明才施展)
+function openActionDetailModal(spell, preset) {
+  const modal = document.getElementById("modal-action-detail");
+  if (!modal) return;
+
+  const c = state.character;
+  const isCaster = !!preset.isCaster;
+  const crbData = state.crbCatalog?.actions ? state.crbCatalog.actions[spell.name] : null;
+
+  const titleElem = document.getElementById("action-detail-title");
+  const badgeElem = document.getElementById("action-detail-badge");
+  const bodyElem = document.getElementById("action-detail-body");
+
+  if (titleElem) {
+    const orig = crbData?.original_name ? ` (${crbData.original_name})` : '';
+    titleElem.innerHTML = `${isCaster ? '🔮' : '⚔️'} 【${spell.name}】${orig}`;
+  }
+
+  if (badgeElem) {
+    badgeElem.textContent = crbData ? `${crbData.level} · ${crbData.school}` : `${spell.level} · ${spell.school || '招式'}`;
+  }
+
+  // 槽位消耗预警提示
+  let slotTipHtml = '';
+  if (spell.isSlot) {
+    const slotsLeft = state.spellSlots ? state.spellSlots.current : 0;
+    const slotsMax = state.spellSlots ? state.spellSlots.max : 0;
+    const isOutOfSlots = (slotsLeft <= 0);
+    slotTipHtml = `
+      <div style="background:${isOutOfSlots ? 'rgba(229,62,62,0.2)' : 'rgba(212,175,55,0.15)'}; border:1px solid ${isOutOfSlots ? '#e53e3e' : '#d4af37'}; border-radius:6px; padding:8px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.86rem; color:${isOutOfSlots ? '#feb2b2' : '#f6d365'};">
+          ${isOutOfSlots ? '⚠️ 当前可用名额已耗尽，需安歇长休/冥想方可恢复！' : `⚡ 本次施展将消耗 1 次名额（当前剩余：<strong>${slotsLeft} / ${slotsMax}</strong>）`}
+        </span>
+      </div>
+    `;
+  } else {
+    slotTipHtml = `
+      <div style="background:rgba(72,187,120,0.15); border:1px solid #48bb78; border-radius:6px; padding:8px 12px; margin-bottom:12px;">
+        <span style="font-size:0.86rem; color:#9ae6b4;">
+          ✨ 此项为 0 环核心戏法 / 基础常备战法，<strong>无需消耗法术位，可无限次自由施展</strong>！
+        </span>
+      </div>
+    `;
+  }
+
+  // 规则参数明细
+  let paramsTable = '';
+  if (crbData) {
+    paramsTable = `
+      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px 14px; margin-bottom:12px; font-size:0.82rem; line-height:1.6;">
+        <div style="color:#d4af37; font-weight:bold; margin-bottom:4px;">📊 《Pathfinder v2.01简体》CRB 官方正规施法参数：</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; color:#cbd5e0;">
+          <div>• 施法时间：<strong>${crbData.cast_time || '1个标准动作'}</strong></div>
+          <div>• 施法成分：<strong>${crbData.components || '言语, 姿势'}</strong></div>
+          <div>• 施展距离：<strong>${crbData.range || '近距 (25尺+5尺/2级)'}</strong></div>
+          <div>• 持续时间：<strong>${crbData.duration || '立即'}</strong></div>
+          <div>• 豁免检定：<strong>${crbData.saving_throw || '无'}</strong></div>
+          <div>• 法术抗力：<strong>${crbData.spell_res || '不可'}</strong></div>
+        </div>
+      </div>
+    `;
+  }
+
+  const crbDescText = crbData?.crb_desc || spell.desc;
+  const subtleText = crbData?.subtle_action || (isCaster ? "广袖轻掩，指尖暗掐灵诀，于无声无息间引动法力。" : "身随意动，敛气凝神，以迅雷之势施展绝技。");
+  const intentText = crbData?.intent_summary || "探查环境、暗中自保或巧破难关，符合社会常理与人物身份。";
+
+  if (bodyElem) {
+    bodyElem.innerHTML = `
+      ${slotTipHtml}
+      ${paramsTable}
+      <div style="background:rgba(20,24,35,0.7); border:1px solid rgba(212,175,55,0.25); border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+        <div style="color:#f6d365; font-weight:bold; margin-bottom:4px;">📖 核心真典官方正统规则解释：</div>
+        <div style="font-size:0.85rem; color:#e2e8f0; line-height:1.6;">${crbDescText}</div>
+      </div>
+      <div style="background:rgba(0,0,0,0.25); border-left:3px solid #63b3ed; border-radius:4px; padding:8px 12px; margin-bottom:12px;">
+        <div style="color:#63b3ed; font-weight:bold; font-size:0.85rem; margin-bottom:2px;">🎭 凡俗/深宫日常情境动作示范：</div>
+        <div style="font-size:0.84rem; color:#cbd5e0; line-height:1.5;">${subtleText}</div>
+      </div>
+      <div style="background:rgba(0,0,0,0.25); border-left:3px solid #48bb78; border-radius:4px; padding:8px 12px;">
+        <div style="color:#48bb78; font-weight:bold; font-size:0.85rem; margin-bottom:2px;">🎯 预期核心意图与达成目的：</div>
+        <div style="font-size:0.84rem; color:#cbd5e0; line-height:1.5;">${intentText}</div>
+      </div>
+    `;
+  }
+
+  modal.classList.remove("hidden");
+  if (typeof audio !== "undefined" && audio.playAlert) audio.playAlert();
+
+  const btnClose = document.getElementById("btn-close-action-detail");
+  const btnCancel = document.getElementById("btn-cancel-action-execute");
+  const btnConfirm = document.getElementById("btn-confirm-action-execute");
+
+  const closeModal = () => modal.classList.add("hidden");
+  if (btnClose) btnClose.onclick = closeModal;
+  if (btnCancel) btnCancel.onclick = closeModal;
+
+  if (btnConfirm) {
+    btnConfirm.onclick = () => {
+      if (spell.isSlot) {
+        if (state.spellSlots.current <= 0) {
+          alert(`${isCaster ? '今日法术位已用尽，需安歇冥想方可恢复！' : '当前战气已耗尽，需稍作喘息！'}`);
+          return;
+        }
+        state.spellSlots.current -= 1;
+        renderSpellsCard();
+      }
+
+      closeModal();
+
+      const actionText = `【行者程序权威动作 · CRB 核心真典】：我（${c?.profile?.name || '行者'}）遵循《Pathfinder 核心规则书 (CRB)》施展【${spell.name}】（${spell.level}）。\n【生活化隐秘动作】：${subtleText}\n【行动意图】：${intentText}\n【CRB 判定基准】：${crbDescText}（请司命据此严格遵循规则与人际常理展开真实文学推演）`;
+      sendPlayerAction(actionText);
+    };
+  }
+}
+
 function renderSpellsCard() {
   const container = document.getElementById("spells-list-container");
   const slotsBadge = document.getElementById("spell-slots-badge");
@@ -3150,6 +3281,8 @@ function renderSpellsCard() {
   preset.spells.forEach(spell => {
     const row = document.createElement("div");
     row.className = "spell-item-row";
+    row.style.cursor = "pointer";
+    row.title = "点击查阅正统规则与意图，二次确认后施展";
     row.innerHTML = `
       <div class="spell-info">
         <div class="spell-name-row">
@@ -3158,26 +3291,18 @@ function renderSpellsCard() {
         </div>
         <div class="spell-desc">${spell.desc}</div>
       </div>
-      <button class="btn btn-cast-spell" title="一键施展并将动作代入对白">${preset.isCaster ? '✨ 念咒施展' : '⚡ 施展'}</button>
+      <button class="btn btn-cast-spell" title="查阅说明并确认施展">📖 详查 · 施展</button>
     `;
 
+    // 整行以及按钮均挂载详查弹窗，绝不直接盲发动作
+    row.onclick = () => openActionDetailModal(spell, preset);
     const castBtn = row.querySelector(".btn-cast-spell");
-    castBtn.onclick = () => {
-      if (spell.isSlot) {
-        if (state.spellSlots.current <= 0) {
-          alert(`${preset.isCaster ? '今日1环法术位已用尽，需安歇冥想方可恢复！' : '当前战气已耗尽，需稍作喘息！'}`);
-          return;
-        }
-        state.spellSlots.current -= 1;
-        renderSpellsCard();
-      }
-
-      const actionText = preset.isCaster
-        ? `【行者起手施法】：我屏气凝神，指捏法印低诵玄真咒诀，调动奥术/神圣灵光，全力施展【${spell.name}】（${spell.desc}）！`
-        : `【行者爆发战技】：我身形如电，步踏中宫，全力施展【${spell.name}】（${spell.desc}）！`;
-
-      sendPlayerAction(actionText);
-    };
+    if (castBtn) {
+      castBtn.onclick = (e) => {
+        e.stopPropagation();
+        openActionDetailModal(spell, preset);
+      };
+    }
 
     container.appendChild(row);
   });
@@ -4202,6 +4327,9 @@ function initApp() {
       localStorage.setItem("pf1e_player_notes", notesTextarea.value);
     };
   }
+
+  // 预载 CRB 核心规则真典
+  loadCrbCatalog();
 
   // 尝试拉取历史存档
   loadGameFromServer();
