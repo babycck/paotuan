@@ -1263,7 +1263,7 @@ function finalizeCharacterCreation() {
   const stream = document.getElementById("narrative-stream");
   stream.innerHTML = "";
 
-  const promptText = `【印契定魄】：行者【${nameInput}】乾坤命格已凝结定魄！佩剑在腰，寒甲覆身，随身秘物【${tokenInput}】已藏入袖中。\n\n命盘已开，风云待定。阁下此番历练，想踏入何种题材的风云天下？（可自由输入：如唐代武周悬疑、宋末边关谍战、明末辽东血战、赛博朋克修真等任何世界观）`;
+  const promptText = `【印契定魄】：行者【${nameInput}】乾坤命格已凝结定魄！佩剑在腰，寒甲覆身，随身秘物【${tokenInput}】已藏入袖中。\n\n命盘已开，风云待定。请阁下以故事背景告知你想玩一个什么样的故事？（可自由打字描写你心仪的故事背景与世界观，司命将以此展开专属单人跑团！）`;
   appendNarrativeEntry("assistant", promptText);
 
   saveGameToServer();
@@ -1290,7 +1290,7 @@ function initSettingsModal() {
         document.getElementById("cfg-api-key").placeholder = `已配置 (${data.masked_api_key})，留空则不修改`;
       }
       document.getElementById("cfg-base-url").value = data.base_url || "https://api.deepseek.com";
-      document.getElementById("cfg-model").value = data.model || "deepseek-chat";
+      document.getElementById("cfg-model").value = data.model || "deepseek-flash";
       document.getElementById("cfg-extra-prompt").value = data.system_prompt_extra || "";
     } catch (e) {}
   };

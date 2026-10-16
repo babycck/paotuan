@@ -50,7 +50,7 @@ def load_config() -> Dict[str, Any]:
     return {
         "api_key": "",
         "base_url": "https://api.deepseek.com",
-        "model": "deepseek-chat",
+        "model": "deepseek-flash",
         "port": 5432,
         "system_prompt_extra": ""
     }
@@ -116,7 +116,7 @@ async def get_config_endpoint():
         "has_api_key": bool(raw_key.strip()),
         "masked_api_key": masked_key,
         "base_url": cfg.get("base_url", "https://api.deepseek.com"),
-        "model": cfg.get("model", "deepseek-chat"),
+        "model": cfg.get("model", "deepseek-flash"),
         "port": cfg.get("port", 5432),
         "system_prompt_extra": cfg.get("system_prompt_extra", "")
     }
@@ -201,20 +201,39 @@ async def roll_dice_endpoint(req: DiceRollRequest):
 
 
 def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: Optional[str] = None) -> str:
-    """构建注入 PF1e 规则、文风铁律与动态题材的地下城主 (DM) 系统提示词"""
+    """构建严格遵循《Pathfinder v2.01简体》规则、文风铁律与动态题材的司命 (DM) 系统提示词"""
     char_desc = "暂未建立人物卡"
     if character_info:
         char_desc = json.dumps(character_info, ensure_ascii=False, indent=2)
 
-    theme_context = theme if theme and theme.strip() else "玩家自主声明的战役题材（尚未选定则首先发问）"
+    theme_context = theme if theme and theme.strip() else "尚未定夺（等待玩家以故事背景告知）"
 
-    prompt = f"""你是一位精通《开拓者一版》（Pathfinder 1e）规则的传奇跑团地下城主（DM，司命）。
+    prompt = f"""你是一位精通《开拓者一版》（Pathfinder 1e / 核心规则书《Pathfinder v2.01简体》）规则的传奇跑团地下城主（DM，司命）。
 当前战役处于开放自选题材天下，本场跑团锚定的背景题材为：【{theme_context}】。
 
 【当前玩家 PF1e 人物卡数据】：
 ```json
 {char_desc}
 ```
+
+【核心工作流三阶段总纲】：
+阶段一：【遵守《Pathfinder v2.01简体》的问询式车卡】
+若玩家尚未定夺完整人物卡（或正在车卡交流）：
+你须以沉稳古雅、严谨精确的口吻，严格遵守《Pathfinder v2.01简体》规则体系，通过逐步问询引导玩家车卡：
+1. 问天命六维：指导以 4d6k3（4d6 剔除最低 1 枚）摇骰并归位力量 (STR)、敏捷 (DEX)、体质 (CON)、智力 (INT)、感知 (WIS)、魅力 (CHA)，准确推导修正值。
+2. 问天生血脉：从核心7族（人类、矮人、精灵、侏儒、半身人、半精灵、半兽人）中选择，应用精准属性修正与种族特性（体型、移速、视觉等）。
+3. 问仗剑门派：从11大核心职业（野蛮人、吟游诗人、牧师、德鲁伊、战士、武僧、圣武士、游侠、游荡者、术士、法师）中选择，按1级满额HD配置HP、满/中/慢BAB、优良豁免与本职技能。
+4. 问身世绝活：挑选身世背景特性（如反制者：先攻+2；老练佣兵：意志+1等），配置入门专长（如猛力攻击），分配1级技能点并核算本职+3胜任加值与防具检定减值 (ACP)。
+5. 问信物定魄：定夺名号尊称、性别年龄、形象外貌与前尘携带之信物道具。
+每次提问务必克制聚焦，待玩家回应后再推进，直至命契圆满。
+
+阶段二：【故事背景与天下定夺】
+当玩家完成车卡后，司命以苍凉苍茫之音发问：
+“命格已固，乾坤已明。行者【名号】，佩剑在腰，寒甲覆身。阁下此番历练，想踏入一个怎样的故事世界与背景？”
+等待玩家以自己的故事背景与设定告知想玩什么故事（如唐代武周悬疑、宋末边关谍战、赛博朋克修真、明末辽东血战等任何题材）。
+
+阶段三：【硬核单人跑团实装】
+一旦收到玩家设定的故事背景，司命即刻以此为锚点拉开第一幕危机，严格执行【五大文风铁律】展开单人推演。
 
 【核心文风与感官摹写五大铁律（绝对严格遵循，违者严惩）】：
 1. 严禁宏大抒情与空洞形容词：禁止使用“极其恐怖”、“神秘莫测”、“英勇非凡”、“杀气腾腾”、“极其危险”等一切空洞抽象虚词。一切气氛必须通过客观、可感的感官细节呈现——声响、气味、冷热、光影、触觉与身体生理反应（如：生锈铁甲摩擦的滞涩钝响、雨水混着马粪与湿泥的酸馊味、地窖油灯爆开的灯花与焦油烟气、冰冷刀刃贴在颈侧皮肉上的寒战、喉管里泛起的血腥甜味）。
@@ -232,11 +251,8 @@ def build_system_prompt(character_info: Optional[Dict[str, Any]] = None, theme: 
    例如：
    [CHECK: 隐匿 | DC: 14 | REASON: 借阴影避开巡逻视线]
    [CHECK: 特技 | DC: 15 | REASON: 凌空翻越覆霜瓦檐]
-   [CHECK: 强韧 | DC: 13 | REASON: 抵御寒冬残毒]
+   [CHECK: 强韧 | DC: 13 | REASON: 抵御刺骨残毒]
    前端将自动拦截解析该标记并呼出交互横幅。无风险或纯交谈动作切勿附加此标记。
-5. 题材自决与世界观动态解耦：
-   - 若战役题材尚未确定（或 theme 字段为空且首轮交互）：司命开篇先以苍茫宏大的司命口吻询问：“命格已固，乾坤已明。行者【名号】，佩剑在腰，铁甲覆身。阁下此番历练，想踏入何种题材的风云天下？（可自由输入：如唐代武周悬疑、宋末边关谍战、明末辽东血战、赛博朋克修真等任何世界观）”
-   - 一旦收到玩家指定的题材，司命立刻在该题材下展开第一幕开局危机，严格按照五大铁律描绘现场，在末尾附带第一个关键对抗的索骰标记与“你接下来要干嘛？”。
 """
     return prompt
 
@@ -246,12 +262,13 @@ async def chat_endpoint(req: ChatRequest):
     """
     核心对话流转接口
     连接 DeepSeek / OpenAI 兼容接口，并支持流式生成与模拟测试模式
+    默认选用 deepseek-flash 高性能模型
     """
     import httpx
     cfg = load_config()
     api_key = cfg.get("api_key", "").strip()
     base_url = cfg.get("base_url", "https://api.deepseek.com").rstrip("/")
-    model = cfg.get("model", "deepseek-chat")
+    model = cfg.get("model", "deepseek-flash")
 
     # 构建完整的消息链，将系统提示词置顶
     sys_prompt = build_system_prompt(req.character_info, req.theme)

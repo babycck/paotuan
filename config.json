@@ -1,7 +1,7 @@
 {
   "api_key": "",
   "base_url": "https://api.deepseek.com",
-  "model": "deepseek-chat",
+  "model": "deepseek-flash",
   "port": 5432,
   "system_prompt_extra": ""
 }
