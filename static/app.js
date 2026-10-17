@@ -1319,6 +1319,7 @@ async function sendPlayerAction(actionText) {
                 .replace(/\[REWARD:.*?\]/g, "")
                 .replace(/\[CHECK:.*?\]/g, "")
                 .replace(/\[QUEST:.*?\]/g, "")
+                .replace(/\[ARC:.*?\]/g, "")
                 .replace(/\[COMBAT:.*?\]/g, "")
                 .replace(/\[COMBAT_UPDATE:.*?\]/g, "")
                 .replace(/\[COMBAT_END\]/g, "")
@@ -1380,10 +1381,29 @@ async function sendPlayerAction(actionText) {
       processedText = processedText.replace(rewardMatch[0], "").trim();
     }
 
+    // 战役主线与暗络支线解析
+    const arcMatch = processedText.match(/\[ARC:\s*(\{.*?\})\]/i);
+    if (arcMatch) {
+      try {
+        state.campaignArc = JSON.parse(arcMatch[1]);
+      } catch (e) {
+        console.warn("解析战役暗络失败:", e);
+      }
+      processedText = processedText.replace(arcMatch[0], "").trim();
+    }
+
     const questMatch = processedText.match(/\[QUEST:\s*([^\]]+)\]/i);
     if (questMatch) {
       const questContent = questMatch[1].trim();
       state.quest = questContent;
+      if (!state.campaignArc) {
+        state.campaignArc = {
+          main_quest: questContent,
+          side_a: "查清牵扯当年的宿怨密辛",
+          side_b: "获取关键物证或特殊机缘",
+          side_c: "暗处潜伏的猜忌与危机"
+        };
+      }
       const themeDescElem = document.getElementById("current-theme-desc");
       if (themeDescElem) {
         themeDescElem.innerHTML = `<strong>【核心使命/主线】：</strong>${questContent}`;
