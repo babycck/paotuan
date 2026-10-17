@@ -113,6 +113,14 @@ class ChatRequest(BaseModel):
     stream: Optional[bool] = True
 
 
+class GenerateProfileRequest(BaseModel):
+    idea: str
+    race: Optional[str] = "人类"
+    cls: Optional[str] = "战士"
+    char_class: Optional[str] = None
+
+
+
 @app.get("/")
 async def root_index():
     """根路径原生直接输出静态游戏主页，免除 307 重定向，解决移动端和非标端口白屏"""
@@ -268,6 +276,97 @@ async def clear_suggestions_endpoint():
     """清空迭代建议"""
     save_suggestions([])
     return {"status": "ok", "message": "建议灵感录已清空"}
+
+
+@app.post("/api/character/generate_profile")
+async def generate_character_profile_endpoint(req: GenerateProfileRequest):
+    """
+    根据玩家随手输入的一两句灵感脑洞，由 DeepSeek 智能分析并提取全套形貌、生平与宿命信物
+    输出严格 JSON 格式
+    """
+    idea = req.idea.strip()
+    if not idea:
+        raise HTTPException(status_code=400, detail="灵感内容不可为空")
+
+    cfg = load_config()
+    api_key = cfg.get("api_key", "").strip()
+    base_url = cfg.get("base_url", "https://api.deepseek.com").rstrip("/")
+    model = cfg.get("model", "deepseek-chat")
+
+    system_instruction = """你是一位精通桌面角色扮演游戏（TRPG）与文学小说人物塑造的大师级地下城主（DM）。
+你的任务：根据玩家提供的一两句简短脑洞灵感，为其创造一位极具戏剧张力、有血有肉有动机的跑团角色。
+你必须严格以合法的 JSON 格式返回，严禁任何额外的开场白、问候语或 markdown 代码块标记以外的多余文字。
+JSON 字段规范：
+{
+  "name": "极具意境与性格的角色姓名（2~4字）",
+  "gender": "男/女",
+  "age": 年龄整数（如 24）,
+  "height": 身高厘米数整数（如 178）,
+  "weight": 体重公斤数整数（如 68）,
+  "build": "身姿体态（如：修长干练、挺拔沉稳、娇柔清雅、魁梧硬朗）",
+  "looks": "外貌肖像与常服装束（生动描摹发型、眉目眼神、神态表情与常服风格，50~80字）",
+  "backstory": "身世经历与当下核心动机（写清出身背景、遭遇挫折或追求，80~120字）",
+  "token": "随身携带的宿命信物（贾宝玉通灵宝玉式的关键转世/宿命羁绊之物，如：一枚带机关的停摆古董怀表、父亲留下的加密U盘）"
+}"""
+
+    target_cls = req.char_class or req.cls or "战士"
+    user_prompt = f"玩家设定的灵感脑洞：【{idea}】\n角色种族底模：{req.race}，核心职业：{target_cls}。请以此脑洞为核心，推演定夺该行者的全套形相、生平与宿命信物。"
+
+
+
+    if not api_key:
+        return {
+            "name": "沈恪",
+            "gender": "男",
+            "age": 27,
+            "height": 177,
+            "weight": 66,
+            "build": "修长干练，微含书卷气",
+            "looks": "碎发干净微乱，戴半框墨色细镜，眼神锐利内敛，身着深灰防风战术风衣与常服衬衫。",
+            "backstory": f"依据【{idea}】所定之因果：曾隐匿于红尘喧嚣之中，因卷入重大利益与真相纷争而蛰伏暗处，誓要查明暗藏深处的宿怨，讨回公道。",
+            "token": "外壳刻有暗纹的复古停摆机械怀表"
+        }
+
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_instruction},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    "temperature": 0.8,
+                    "max_tokens": 800
+                }
+            )
+            if resp.status_code == 200:
+                res_data = resp.json()
+                raw_content = res_data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', raw_content)
+                if json_match:
+                    return json.loads(json_match.group(0))
+    except Exception:
+        pass
+
+    return {
+        "name": "陆行知",
+        "gender": "男",
+        "age": 25,
+        "height": 178,
+        "weight": 67,
+        "build": "身姿修长，精悍从容",
+        "looks": "眼眸漆黑沉静，神色自若，着素雅干练常服，举止间暗藏戒备与锋芒。",
+        "backstory": f"根据您的灵感【{idea}】：行走于世间迷局边缘，虽历经变故挫折，心中却始终坚守最初的执念与真相，伺机破局而入。",
+        "token": "贴身暗藏的雕花玄铁信物"
+    }
 
 
 @app.post("/api/roll")

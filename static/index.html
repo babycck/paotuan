@@ -620,6 +620,26 @@
             <p>天地有相，人各有貌。输入你的尊名、形貌体态与生平（无论何种种族底模，在东方/现实题材下皆以纯正人类形相呈现）：</p>
           </div>
           <div class="finalize-form">
+            <!-- 🔮 AI 司命 · 一键灵感定魄推演舱 -->
+            <div class="ai-profile-generator-box" style="background: rgba(22, 28, 40, 0.9); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <strong style="color: #f6d365; font-size: 0.95rem;">🔮 AI 司命 · 一键灵感定魄</strong>
+                  <span class="badge badge-gold" style="font-size: 0.72rem;">自动填满全部表单</span>
+                </div>
+                <small style="color: #a0aec0;">输入一两句任意脑洞，AI 瞬间推演出符合设定的全套形相与生平！</small>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="input-ai-profile-idea" class="form-input" placeholder="输入任意设想，例如：从大厂被裁员、暗中收集前东家黑料反戈一击的失业程序员" style="flex: 1; background: rgba(0,0,0,0.5); font-size: 0.88rem;">
+                <button type="button" class="btn btn-gold" id="btn-generate-ai-profile" style="white-space: nowrap; font-weight: bold; padding: 6px 16px;">
+                  ✨ AI 提炼
+                </button>
+              </div>
+              <div id="ai-profile-loading-hint" class="hidden" style="color: #90cdf4; font-size: 0.82rem; margin-top: 6px;">
+                ⚡ 司命正在参悟灵感、推演命盘并生成全套形貌中...
+              </div>
+            </div>
+
             <div class="form-group-row">
               <div class="form-group">
                 <label for="input-char-name">行者尊名：</label>

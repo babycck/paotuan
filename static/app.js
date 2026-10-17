@@ -1863,7 +1863,30 @@ function initCharacterWizard() {
   renderClassCards();
   renderSubclassSelector();
   renderAbilityAssignmentGrid();
+
+  // 第5步：问形相与生平 输入项实时同步监听
+  const step5InputIds = [
+    "input-char-name", "input-char-gender", "input-char-age",
+    "input-char-height", "input-char-weight", "input-char-build",
+    "input-char-looks", "input-char-backstory", "input-char-token",
+    "wizard-trait-select"
+  ];
+  step5InputIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("input", () => {
+        if (state.wizard.currentStep === 5) renderWizardFinalPreview();
+      });
+      el.addEventListener("change", () => {
+        if (state.wizard.currentStep === 5) renderWizardFinalPreview();
+      });
+    }
+  });
+
+  // 初始化第5步 AI 智能分析提炼人设
+  initAiProfileGenerator();
 }
+
 
 function showWizardStep(step) {
   state.wizard.currentStep = step;
@@ -2529,6 +2552,7 @@ function renderWizardFinalPreview() {
   const buildVal = document.getElementById("input-char-build")?.value || "修长匀称";
   const looksVal = document.getElementById("input-char-looks")?.value || "墨发束冠，眼眸清朗，身着素青道袍";
   const backstoryVal = document.getElementById("input-char-backstory")?.value || "自幼求索大道与身世真相";
+  const tokenVal = document.getElementById("input-char-token")?.value.trim() || "家传断佩";
 
   const subclassInfo = state.wizard.selectedSubclass ? `【${state.wizard.selectedSubclass.name}】` : "";
   const equip = CLASS_STARTING_EQUIPMENT[cls] || CLASS_STARTING_EQUIPMENT["战士"];
@@ -2549,6 +2573,7 @@ function renderWizardFinalPreview() {
     <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(212,175,55,0.3); padding:14px; border-radius:6px; font-size:13px; line-height:1.7;">
       <p><strong>尊号形貌：</strong>${nameVal} (${genderVal}，${ageVal}岁) · 身高 ${heightVal}cm / 体重 ${weightVal}kg · 【${buildVal}】</p>
       <p><strong>外形肖像：</strong>${looksVal} <span style="color:#f6d365;">(纯正人类神采，绝无异形异化)</span></p>
+      <p><strong>随身信物：</strong>${tokenVal} <span style="color:#f6d365;">(宿命之宝 · 渊源羁绊)</span></p>
       <p><strong>宗门命盘：</strong>${race} · ${cls} 1级 ${subclassInfo}</p>
       <p><strong>气血根基 (HP)：</strong><strong style="color:#48bb78;">${hpMax} 点</strong> (满额HD: d${clsData.hd} + 体质${conMod}${fcbHpBonus ? ' + 天赋奖励1' : ''}${hasToughness ? ' + 健壮3' : ''})</p>
       <p><strong>身世专长：</strong>${feats.join('、') || '暂无'} | 特性: ${traitVal}</p>
@@ -2558,6 +2583,83 @@ function renderWizardFinalPreview() {
     </div>
   `;
 }
+
+// 🔮 AI 智能分析提炼人设并自动填满表单
+function initAiProfileGenerator() {
+  const btn = document.getElementById("btn-generate-ai-profile");
+  const inputIdea = document.getElementById("input-ai-profile-idea");
+  const hint = document.getElementById("ai-profile-loading-hint");
+
+  if (!btn || !inputIdea) return;
+
+  btn.onclick = async () => {
+    const idea = inputIdea.value.trim();
+    if (!idea) {
+      alert("请先输入您心中的人设灵感或脑洞片语！");
+      inputIdea.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    if (hint) hint.classList.remove("hidden");
+
+    try {
+      const resp = await fetch("/api/character/generate_profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea: idea,
+          race: state.wizard.selectedRace || "人类",
+          cls: state.wizard.selectedClass || "战士",
+          char_class: state.wizard.selectedClass || "战士"
+        })
+      });
+
+      if (!resp.ok) {
+        throw new Error(`网络响应错误 (${resp.status})`);
+      }
+
+      const data = await resp.json();
+      if (data.name && document.getElementById("input-char-name")) {
+        document.getElementById("input-char-name").value = data.name;
+      }
+      if (data.gender && document.getElementById("input-char-gender")) {
+        document.getElementById("input-char-gender").value = data.gender;
+      }
+      if (data.age && document.getElementById("input-char-age")) {
+        document.getElementById("input-char-age").value = data.age;
+      }
+      if (data.height && document.getElementById("input-char-height")) {
+        document.getElementById("input-char-height").value = data.height;
+      }
+      if (data.weight && document.getElementById("input-char-weight")) {
+        document.getElementById("input-char-weight").value = data.weight;
+      }
+      if (data.build && document.getElementById("input-char-build")) {
+        document.getElementById("input-char-build").value = data.build;
+      }
+      if (data.looks && document.getElementById("input-char-looks")) {
+        document.getElementById("input-char-looks").value = data.looks;
+      }
+      if (data.backstory && document.getElementById("input-char-backstory")) {
+        document.getElementById("input-char-backstory").value = data.backstory;
+      }
+      if (data.token && document.getElementById("input-char-token")) {
+        document.getElementById("input-char-token").value = data.token;
+      }
+
+      // 自动触发底部预览卡片实时同步更新
+      renderWizardFinalPreview();
+    } catch (err) {
+      console.error("AI 提炼人设失败:", err);
+      alert("AI 提炼人设暂未响应，请稍后重试或手动输入。");
+    } finally {
+      btn.disabled = false;
+      if (hint) hint.classList.add("hidden");
+    }
+  };
+}
+
 
 // 终局封缄角色卡 (Finalize)
 function finalizeCharacterCreation() {
