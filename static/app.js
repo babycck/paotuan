@@ -1548,19 +1548,13 @@ async function sendPlayerAction(actionText) {
                 contentElem.innerHTML = "";
               }
               accumulatedText += parsed.content;
-              contentElem.innerHTML = accumulatedText
-                .replace(/\[REWARD:.*?\]/g, "")
-                .replace(/\[CHECK:.*?\]/g, "")
-                .replace(/\[QUEST:.*?\]/g, "")
-                .replace(/\[ARC:.*?\]/g, "")
-                .replace(/\[COMBAT:.*?\]/g, "")
-                .replace(/\[COMBAT_UPDATE:.*?\]/g, "")
-                .replace(/\[COMBAT_END\]/g, "")
-                .replace(/\[TIME:.*?\]/g, "")
-                .replace(/\[NPC:.*?\]/g, "")
-                .replace(/\[SUGGESTIONS:.*?\]/g, "")
-                .replace(/\n\n/g, "</p><p>")
+              // 彻底过滤已闭合及正在输出中未闭合的后台标记，防止文本“先显示后回弹抽走”
+              const displayHtml = accumulatedText
+                .replace(/\[(?:REWARD|CHECK|QUEST|ARC|COMBAT|COMBAT_UPDATE|COMBAT_END|TIME|NPC|SUGGESTIONS)[\s\S]*?\]/gi, "")
+                .replace(/\[(?:REWARD|CHECK|QUEST|ARC|COMBAT|COMBAT_UPDATE|COMBAT_END|TIME|NPC|SUGGESTIONS)[^\]]*$/gi, "")
+                .replace(/\n\n+/g, "</p><p>")
                 .replace(/\n/g, "<br>");
+              contentElem.innerHTML = displayHtml;
               stream.scrollTop = stream.scrollHeight;
             }
           } catch (e) {
@@ -1717,9 +1711,14 @@ async function sendPlayerAction(actionText) {
       processedText = processedText.replace(/\[COMBAT_END\]/gi, "").trim();
     }
 
-    const cleanFinalText = parseAndHandleCheckDirective(processedText);
+    let cleanFinalText = parseAndHandleCheckDirective(processedText);
+    cleanFinalText = cleanFinalText
+      .replace(/\[(?:REWARD|CHECK|QUEST|ARC|COMBAT|COMBAT_UPDATE|COMBAT_END|TIME|NPC|SUGGESTIONS)[\s\S]*?\]/gi, "")
+      .replace(/\[(?:REWARD|CHECK|QUEST|ARC|COMBAT|COMBAT_UPDATE|COMBAT_END|TIME|NPC|SUGGESTIONS)[^\]]*$/gi, "")
+      .trim();
+
     contentElem.innerHTML = cleanFinalText
-      .replace(/\n\n/g, "</p><p>")
+      .replace(/\n\n+/g, "</p><p>")
       .replace(/\n/g, "<br>");
 
     state.history.push({ role: "assistant", content: cleanFinalText });
