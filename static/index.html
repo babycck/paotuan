@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>《问道大唐》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261017_11">
+  <title>《蘑菇灯沉浸跑团》PF1e 纯文字独立跑团系统</title>
+  <link rel="stylesheet" href="style.css?v=20261017_20">
 </head>
 <body class="ink-theme">
   <!-- 顶栏导航 -->
   <header class="app-header">
     <div class="header-brand">
-      <div class="seal-icon">道</div>
+      <div class="seal-icon">菇</div>
       <div class="header-titles">
-        <h1 class="main-title">问道大唐 · 纯文字独立跑团系统</h1>
-        <span class="sub-title" id="campaign-theme-subtitle">Pathfinder 1st Edition 全自由题材叙事引擎</span>
+        <h1 class="main-title">蘑菇灯沉浸跑团 · 纯文字独立引擎</h1>
+        <span class="sub-title" id="campaign-theme-subtitle">Pathfinder 1st Edition 全题材通用叙事引擎</span>
       </div>
     </div>
 
@@ -25,6 +25,10 @@
     </div>
 
     <div class="header-actions">
+      <!-- 剧情世界流转时间徽章 -->
+      <span class="badge badge-silver time-badge" id="game-time-badge" title="当前剧情推演时间流转">⏳ 晨光熹微 / 07:30</span>
+      <!-- 结缘人物谱模态框开关 -->
+      <button id="btn-open-npc-roster" class="btn btn-silver" title="查阅结识人物谱与好感羁绊">👥 结缘人物谱</button>
       <button id="btn-new-story" class="btn btn-silver" title="重开战役，开启一段全新故事与世界观">🔄 开启新故事</button>
       <button id="btn-toggle-grid" class="btn btn-dark hidden" title="展开/收起 5 尺战术战棋沙盘">⚔️ 5尺沙盘</button>
       <button id="btn-open-wizard" class="btn btn-gold" title="开启AI司命问询式车卡向导">📜 司命车卡</button>
@@ -339,6 +343,8 @@
 
       <!-- 底部自由自然语言输入舱（绝对杜绝 ABCD 选项） -->
       <footer class="narrative-input-box">
+        <!-- 行动突破智能建议胶囊（1~2个关键启发，支持一键点击填入输入框） -->
+        <div class="action-suggestions-row hidden" id="action-suggestions-row"></div>
         <div class="input-prompt-label">
           <div class="prompt-text-group">
             <span class="sparkle">✦</span>
@@ -971,7 +977,33 @@
     </div>
   </div>
 
+  <!-- 模态框 10：结缘人物谱与好感羁绊图鉴 -->
+  <div class="modal-overlay hidden" id="modal-npc-roster">
+    <div class="modal-window npc-roster-window" style="max-width: 660px; width: 92vw; background: #151922; border: 1px solid var(--gold-border); box-shadow: 0 10px 45px rgba(0,0,0,0.92); border-radius: 8px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(212,175,55,0.25); padding: 12px 18px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; color: #f6d365; font-size: 1.15rem;">👥 结缘人物谱 · 羁绊图鉴</h3>
+          <span class="badge badge-gold" id="npc-count-badge">已结识 0 人</span>
+        </div>
+        <button class="btn-close-modal" id="btn-close-npc-roster" style="background: none; border: none; color: #a0aec0; font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="modal-body npc-roster-body scrollable" id="npc-roster-body" style="max-height: 65vh; overflow-y: auto; padding: 16px;">
+        <div class="empty-npc-tip" style="text-align: center; color: #a0aec0; padding: 30px 10px;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">📜</div>
+          <p>暂未结识重要角色。随着剧情推演与 NPC 产生交集，司命将自动在此收录羁绊与态度！</p>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.8rem; color: #a0aec0;">
+        <span>💡 司命推演时将严格以此图谱为短期记忆锚点，绝不混淆姓名与好感态度。</span>
+        <button class="btn btn-silver" id="btn-close-npc-footer" style="padding: 5px 14px; font-size: 0.84rem;">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全屏酷炫灵光粒子动效画布 (响应法术施展与关键判决) -->
+  <canvas id="fx-canvas" class="fx-canvas-overlay"></canvas>
+
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_30"></script>
+  <script src="app.js?v=20261017_31"></script>
 </body>
 </html>

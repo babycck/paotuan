@@ -553,6 +553,12 @@ const state = {
   // 战役宏观暗络大纲（核心主线 + 3支线）
   campaignArc: null,
 
+  // 剧情世界时间流转锚点
+  time_of_day: "晨光熹微 / 07:30",
+
+  // 结缘人物谱 (短期记忆锚点与好感羁绊)
+  npc_roster: [],
+
   // 挂起的索骰信息 (Pending Check)
   pendingCheck: null,
 
@@ -582,6 +588,229 @@ const state = {
   }
 };
 
+
+// =========================================================
+// 3.5 全宇宙全题材通用引擎：时间流转、结缘人物谱与酷炫灵光动效
+// =========================================================
+
+// 1. 时间流转展示更新
+function updateTimeDisplay(timeStr) {
+  if (!timeStr) return;
+  state.time_of_day = timeStr;
+  const badge = document.getElementById("game-time-badge");
+  if (badge) {
+    badge.textContent = `⏳ ${timeStr}`;
+  }
+}
+
+// 2. 结缘人物谱管理器
+function addOrUpdateNpc(npc) {
+  if (!npc || !npc.name) return;
+  if (!state.npc_roster) state.npc_roster = [];
+  
+  const existingIdx = state.npc_roster.findIndex(n => n.name === npc.name);
+  if (existingIdx !== -1) {
+    state.npc_roster[existingIdx] = {
+      ...state.npc_roster[existingIdx],
+      role: npc.role || state.npc_roster[existingIdx].role,
+      attitude: npc.attitude || state.npc_roster[existingIdx].attitude,
+      relation: npc.relation || state.npc_roster[existingIdx].relation
+    };
+  } else {
+    state.npc_roster.push({
+      name: npc.name,
+      role: npc.role || "未明",
+      attitude: npc.attitude || "中立",
+      relation: npc.relation || "初识结缘"
+    });
+  }
+
+  updateNpcCountBadge();
+  renderNpcRosterModal();
+}
+
+function updateNpcCountBadge() {
+  const countBadge = document.getElementById("npc-count-badge");
+  const count = (state.npc_roster || []).length;
+  if (countBadge) {
+    countBadge.textContent = `已结识 ${count} 人`;
+  }
+}
+
+function renderNpcRosterModal() {
+  const container = document.getElementById("npc-roster-body");
+  if (!container) return;
+
+  const roster = state.npc_roster || [];
+  if (roster.length === 0) {
+    container.innerHTML = `
+      <div class="empty-npc-tip" style="text-align: center; color: #a0aec0; padding: 30px 10px;">
+        <div style="font-size: 2.2rem; margin-bottom: 8px;">📜</div>
+        <p>暂未结识重要角色。随着剧情推演与 NPC 产生交集，司命将自动在此收录羁绊与态度！</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = `<div class="npc-cards-grid">`;
+  roster.forEach(npc => {
+    let attitudeClass = "attitude-neutral";
+    const att = (npc.attitude || "").toLowerCase();
+    if (/友|亲|慕|喜|敬|信|崇/.test(att)) attitudeClass = "attitude-friendly";
+    else if (/警|疑|防|慎|探/.test(att)) attitudeClass = "attitude-wary";
+    else if (/敌|恨|杀|怨|死/.test(att)) attitudeClass = "attitude-hostile";
+
+    html += `
+      <div class="npc-card">
+        <div class="npc-card-header">
+          <span class="npc-card-name">${npc.name}</span>
+          <span class="npc-attitude-badge ${attitudeClass}">态度: ${npc.attitude || '中立'}</span>
+        </div>
+        <div class="npc-card-role">阵营/身份：${npc.role || '隐秘'}</div>
+        <div class="npc-card-relation">${npc.relation || '交错命运，风云初聚'}</div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function initNpcRosterModal() {
+  const modal = document.getElementById("modal-npc-roster");
+  const btnOpen = document.getElementById("btn-open-npc-roster");
+  const btnClose = document.getElementById("btn-close-npc-roster");
+  const btnFooter = document.getElementById("btn-close-npc-footer");
+
+  if (!modal) return;
+  const openModal = () => {
+    modal.classList.remove("hidden");
+    updateNpcCountBadge();
+    renderNpcRosterModal();
+  };
+  const closeModal = () => modal.classList.add("hidden");
+
+  if (btnOpen) btnOpen.onclick = openModal;
+  if (btnClose) btnClose.onclick = closeModal;
+  if (btnFooter) btnFooter.onclick = closeModal;
+}
+
+// 3. 突破行动智能建议胶囊渲染器
+function renderActionSuggestions(suggestions) {
+  const container = document.getElementById("action-suggestions-row");
+  const inputAction = document.getElementById("input-action");
+  if (!container) return;
+
+  if (!suggestions || suggestions.length === 0) {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = "";
+  suggestions.slice(0, 2).forEach(sugg => {
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "suggestion-pill";
+    pill.textContent = sugg;
+    pill.title = "点击直接采纳并填入行动意图输入框";
+    pill.onclick = () => {
+      if (inputAction) {
+        inputAction.value = sugg;
+        inputAction.focus();
+      }
+    };
+    container.appendChild(pill);
+  });
+  container.classList.remove("hidden");
+}
+
+// 4. 全屏酷炫灵光粒子动效系统 (Particle FX)
+const ParticleFX = {
+  canvas: null,
+  ctx: null,
+  particles: [],
+  animId: null,
+
+  init() {
+    this.canvas = document.getElementById("fx-canvas");
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext("2d");
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
+  },
+
+  resize() {
+    if (!this.canvas) return;
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  },
+
+  burst(type = "gold", count = 50) {
+    if (!this.canvas || !this.ctx) this.init();
+    if (!this.ctx) return;
+
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    const colors = type === "magic" 
+      ? ["#63b3ed", "#90cdf4", "#bbee66", "#f6d365", "#fff"]
+      : ["#f6d365", "#d4af37", "#fbd38d", "#feb2b2", "#fff"];
+
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 7 + 2;
+      const radius = Math.random() * 4 + 1.5;
+      this.particles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        alpha: 1,
+        radius: radius,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        decay: Math.random() * 0.025 + 0.015
+      });
+    }
+
+    if (!this.animId) {
+      this.loop();
+    }
+  },
+
+  loop() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.alpha -= p.decay;
+
+      if (p.alpha <= 0) {
+        this.particles.splice(i, 1);
+        continue;
+      }
+
+      this.ctx.save();
+      this.ctx.globalAlpha = p.alpha;
+      this.ctx.fillStyle = p.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = p.color;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    }
+
+    if (this.particles.length > 0) {
+      this.animId = requestAnimationFrame(() => this.loop());
+    } else {
+      this.animId = null;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+  }
+};
 
 // =========================================================
 // 4. 战术面板视图同步、战利品与天命继业系统
@@ -1140,6 +1369,7 @@ function performDiceRoll(type, bonus, dc, callback) {
       critBadge.textContent = "★ 绝境大成功 (Natural 20) ★";
       critBadge.classList.add("crit-success");
       audio.playNat20();
+      if (typeof ParticleFX !== "undefined") ParticleFX.burst("gold", 80);
     } else if (d20 === 1) {
       critBadge.textContent = "☠ 绝境大失败 (Natural 1) ☠";
       critBadge.classList.add("crit-fail");
@@ -1147,6 +1377,7 @@ function performDiceRoll(type, bonus, dc, callback) {
     } else {
       critBadge.textContent = isSuccess ? "对抗成功" : "局势恶化 (对抗受挫)";
       critBadge.classList.add(isSuccess ? "crit-success" : "crit-fail");
+      if (isSuccess && typeof ParticleFX !== "undefined") ParticleFX.burst("gold", 35);
     }
 
     calcRow.textContent = `D20 (${d20}) + 加值 (${fmtMod(bonus)}) = 总值 ${total}`;
@@ -1278,6 +1509,8 @@ async function sendPlayerAction(actionText) {
         theme: state.theme,
         chronicles: state.chronicles || [],
         campaign_arc: state.campaignArc || null,
+        time_of_day: state.time_of_day || "晨光熹微 / 07:30",
+        npc_roster: state.npc_roster || [],
         stream: true
       })
     });
@@ -1323,6 +1556,9 @@ async function sendPlayerAction(actionText) {
                 .replace(/\[COMBAT:.*?\]/g, "")
                 .replace(/\[COMBAT_UPDATE:.*?\]/g, "")
                 .replace(/\[COMBAT_END\]/g, "")
+                .replace(/\[TIME:.*?\]/g, "")
+                .replace(/\[NPC:.*?\]/g, "")
+                .replace(/\[SUGGESTIONS:.*?\]/g, "")
                 .replace(/\n\n/g, "</p><p>")
                 .replace(/\n/g, "<br>");
               stream.scrollTop = stream.scrollHeight;
@@ -1339,8 +1575,42 @@ async function sendPlayerAction(actionText) {
       timerInterval = null;
     }
 
-    // 后处理：解析主线任务指令、战利品、索骰与战斗指令
+    // 后处理：解析主线任务指令、时间流转、人物谱、建议胶囊、战利品、索骰与战斗指令
     let processedText = accumulatedText;
+
+    // 1. 时间流转解析 [TIME: "时辰/时间"]
+    const timeMatch = processedText.match(/\[TIME:\s*["“']?([^"”'\]]+)["”']?\]/i);
+    if (timeMatch) {
+      const newTime = timeMatch[1].trim();
+      updateTimeDisplay(newTime);
+      processedText = processedText.replace(timeMatch[0], "").trim();
+    }
+
+    // 2. 结缘人物谱更新解析 [NPC: {"name": "...", "role": "...", "attitude": "...", "relation": "..."}]
+    const npcMatches = processedText.matchAll(/\[NPC:\s*(\{.*?\})\]/gi);
+    for (const match of npcMatches) {
+      try {
+        const npcData = JSON.parse(match[1]);
+        addOrUpdateNpc(npcData);
+      } catch (e) {
+        console.warn("解析 NPC 标记失败:", e);
+      }
+      processedText = processedText.replace(match[0], "").trim();
+    }
+
+    // 3. 突破行动智能建议胶囊 [SUGGESTIONS: ["...", "..."]]
+    const suggMatch = processedText.match(/\[SUGGESTIONS:\s*(\[.*?\])\]/i);
+    if (suggMatch) {
+      try {
+        const suggestions = JSON.parse(suggMatch[1]);
+        renderActionSuggestions(suggestions);
+      } catch (e) {
+        console.warn("解析建议胶囊失败:", e);
+      }
+      processedText = processedText.replace(suggMatch[0], "").trim();
+    } else {
+      renderActionSuggestions([]);
+    }
 
     // 战利品与经验/金钱奖励解析 [REWARD: {"xp": 100, "gp": 30, "items": [...], "reason": "..."}]
     const rewardMatch = processedText.match(/\[REWARD:\s*(\{.*?\})\]/i);
@@ -3266,6 +3536,11 @@ function openActionDetailModal(spell, preset) {
 
       closeModal();
 
+      // 触发酷炫灵光粒子动效
+      if (typeof ParticleFX !== "undefined") {
+        ParticleFX.burst(isCaster ? "magic" : "gold", 70);
+      }
+
       const actionText = `【行者程序权威动作 · CRB 核心真典】：我（${c?.profile?.name || '行者'}）遵循《Pathfinder 核心规则书 (CRB)》施展【${spell.name}】（${spell.level}）。\n【生活化隐秘动作】：${subtleText}\n【行动意图】：${intentText}\n【CRB 判定基准】：${crbDescText}（请司命据此严格遵循规则与人际常理展开真实文学推演）`;
       sendPlayerAction(actionText);
     };
@@ -3573,6 +3848,10 @@ async function saveGameToServer() {
         character: state.character,
         theme: state.theme,
         history: state.history,
+        time_of_day: state.time_of_day,
+        npc_roster: state.npc_roster,
+        chronicles: state.chronicles,
+        campaignArc: state.campaignArc,
         notes: notesElem ? notesElem.value : (localStorage.getItem("pf1e_player_notes") || "")
       }
     };
@@ -3594,6 +3873,17 @@ async function loadGameFromServer() {
     if (json.data) {
       if (json.data.character) state.character = json.data.character;
       if (json.data.history) state.history = json.data.history;
+      if (json.data.time_of_day) {
+        state.time_of_day = json.data.time_of_day;
+        updateTimeDisplay(state.time_of_day);
+      }
+      if (json.data.npc_roster) {
+        state.npc_roster = json.data.npc_roster;
+        updateNpcCountBadge();
+      }
+      if (json.data.chronicles) state.chronicles = json.data.chronicles;
+      if (json.data.campaignArc) state.campaignArc = json.data.campaignArc;
+
       if (json.data.notes) {
         const notesElem = document.getElementById("player-notes");
         if (notesElem) notesElem.value = json.data.notes;
@@ -3602,7 +3892,7 @@ async function loadGameFromServer() {
       if (json.data.theme) {
         state.theme = json.data.theme;
         const subTitleElem = document.getElementById("campaign-theme-subtitle");
-        if (subTitleElem) subTitleElem.textContent = `${state.theme} · Pathfinder 1e 叙事引擎`;
+        if (subTitleElem) subTitleElem.textContent = `${state.theme} · 全题材通用叙事引擎`;
         const themeDescElem = document.getElementById("current-theme-desc");
         if (themeDescElem) themeDescElem.textContent = state.theme;
       }
@@ -4233,6 +4523,12 @@ function initApp() {
   // 2. 初始化战棋沙盘与新故事按钮
   CombatGrid.init();
   initNewStoryButton();
+
+  // 2.5 初始化结缘人物谱与全屏酷炫粒子动效
+  initNpcRosterModal();
+  if (typeof ParticleFX !== "undefined") {
+    ParticleFX.init();
+  }
 
   // 3. 初始化车卡向导与设置模态框
   initCharacterWizard();

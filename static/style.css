@@ -2614,6 +2614,177 @@ html, body {
   font-weight: bold;
 }
 
+/* ==========================================================================
+   《蘑菇灯沉浸跑团》Universal 2.0 专属动效与组件
+   ========================================================================== */
+
+/* 1. 剧情世界时间流转徽章 */
+.time-badge {
+  background: rgba(18, 22, 32, 0.85);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #f6d365;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  border-radius: 16px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+.time-badge:hover {
+  border-color: #f6d365;
+  box-shadow: 0 0 14px rgba(246, 211, 101, 0.3);
+}
+
+/* 2. 突破行动智能启发建议胶囊 (1~2个线索点) */
+.action-suggestions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(14, 18, 26, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  animation: fadeIn 0.3s ease-out;
+}
+.action-suggestions-row.hidden {
+  display: none !important;
+}
+.suggestion-pill {
+  background: rgba(30, 36, 50, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 14px;
+  padding: 4px 12px;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.suggestion-pill:hover, .suggestion-pill:active {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: #f6d365;
+  color: #f6d365;
+  transform: translateY(-1px);
+}
+.suggestion-pill::before {
+  content: "💡";
+  font-size: 0.76rem;
+}
+
+/* 3. 结缘人物谱 (羁绊图鉴) 样式 */
+.npc-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.npc-card {
+  background: rgba(22, 27, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.npc-card:hover {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.npc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.npc-card-name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #f6d365;
+}
+.npc-attitude-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+.attitude-friendly {
+  background: rgba(72, 187, 120, 0.15);
+  color: #68d391;
+  border-color: rgba(72, 187, 120, 0.35);
+}
+.attitude-wary {
+  background: rgba(237, 137, 54, 0.15);
+  color: #f6ad55;
+  border-color: rgba(237, 137, 54, 0.35);
+}
+.attitude-hostile {
+  background: rgba(229, 62, 62, 0.15);
+  color: #fc8181;
+  border-color: rgba(229, 62, 62, 0.35);
+}
+.attitude-neutral {
+  background: rgba(160, 174, 192, 0.15);
+  color: #cbd5e0;
+  border-color: rgba(160, 174, 192, 0.35);
+}
+.npc-card-role {
+  font-size: 0.78rem;
+  color: #a0aec0;
+  margin-bottom: 6px;
+}
+.npc-card-relation {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  line-height: 1.45;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 8px;
+  border-radius: 4px;
+  border-left: 2px solid #d4af37;
+}
+
+/* 4. 全屏酷炫动效画布 */
+.fx-canvas-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999;
+}
+
+/* 5. iPad 与触控设备专项人体工程学优化 */
+@media (pointer: coarse), (min-width: 768px) and (max-width: 1180px) {
+  /* 加大点击目标区域 */
+  button, .btn, .nav-btn, .suggestion-pill, .combat-cell {
+    min-height: 42px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .header-actions {
+    gap: 8px;
+  }
+  .header-actions button, .header-actions span {
+    padding: 8px 12px;
+    font-size: 0.86rem;
+  }
+  .action-textarea {
+    font-size: 16px !important; /* 彻底防止 iPad/iOS 自动缩放视角 */
+    padding: 10px 12px;
+    min-height: 60px;
+  }
+  .btn-send {
+    min-width: 90px;
+  }
+  /* 平板滚动平滑度 */
+  .scrollable {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 
 
 
