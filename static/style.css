@@ -2785,6 +2785,30 @@ html, body {
   }
 }
 
+/* 6. 言行双枢 · 快捷对白与动作模态框样式 */
+.speech-tone-btn.active {
+  background: linear-gradient(135deg, rgba(99, 179, 237, 0.35), rgba(30, 35, 48, 0.9)) !important;
+  border-color: #63b3ed !important;
+  color: #90cdf4 !important;
+  font-weight: bold;
+}
+.action-prefix-btn.active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.35), rgba(30, 35, 48, 0.9)) !important;
+  border-color: #f6d365 !important;
+  color: #f6d365 !important;
+  font-weight: bold;
+}
+.btn-outline-cyan {
+  border: 1px solid rgba(99, 179, 237, 0.6);
+  background: rgba(99, 179, 237, 0.12);
+  color: #90cdf4;
+}
+.btn-outline-cyan:hover, .btn-outline-cyan:active {
+  background: rgba(99, 179, 237, 0.3);
+  border-color: #63b3ed;
+  color: #fff;
+}
+
 
 
 

@@ -348,9 +348,11 @@
         <div class="input-prompt-label">
           <div class="prompt-text-group">
             <span class="sparkle">✦</span>
-            <span>自由声明意图（开放自然语言，知难可变卦）：</span>
-            <button type="button" class="btn btn-sm btn-outline-gold" id="btn-open-manual-roll" title="若司命提及检定却未触发横幅，或你想主动发起探查/隐匿/攻击，可点击此处选择带加值的掷骰" style="margin-left: 10px; padding: 2px 10px; font-size: 0.78rem; border: 1px solid rgba(212,175,55,0.6); border-radius: 4px; background: rgba(212,175,55,0.12); color: #f6d365; cursor: pointer;">
-              🎲 自主掷骰 (查卡带加值)
+            <button type="button" class="btn btn-sm btn-outline-cyan" id="btn-open-speech-modal" title="输入我说的话，点确认自动填入下方输入框，免打'我说'" style="margin-left: 10px; padding: 4px 12px; font-size: 0.82rem; border: 1px solid rgba(99,179,237,0.7); border-radius: 6px; background: rgba(99,179,237,0.15); color: #90cdf4; cursor: pointer; font-weight: 600;">
+              💬 说 (对白)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-gold" id="btn-open-action-modal" title="输入我做的事，点确认自动填入下方输入框，免打'我做'" style="margin-left: 6px; padding: 4px 12px; font-size: 0.82rem; border: 1px solid rgba(212,175,55,0.7); border-radius: 6px; background: rgba(212,175,55,0.15); color: #f6d365; cursor: pointer; font-weight: 600;">
+              ⚡ 动作 (举措)
             </button>
           </div>
           <!-- 跑团迭代建议即时收录开关 -->
@@ -996,6 +998,74 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.8rem; color: #a0aec0;">
         <span>💡 司命推演时将严格以此图谱为短期记忆锚点，绝不混淆姓名与好感态度。</span>
         <button class="btn btn-silver" id="btn-close-npc-footer" style="padding: 5px 14px; font-size: 0.84rem;">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 11：快捷对白输入弹窗（免打“我说”） -->
+  <div class="modal-overlay hidden" id="modal-speech-input">
+    <div class="modal-window speech-window" style="max-width: 540px; width: 92vw; background: #161b26; border: 1px solid rgba(99,179,237,0.4); box-shadow: 0 10px 45px rgba(0,0,0,0.9); border-radius: 8px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(99,179,237,0.25); padding: 12px 18px;">
+        <h3 style="margin: 0; color: #90cdf4; font-size: 1.15rem;">💬 行者原声 · 亲口所言</h3>
+        <button class="btn-close-modal" id="btn-close-speech-modal" style="background: none; border: none; color: #a0aec0; font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <p style="font-size: 0.84rem; color: #a0aec0; margin: 0 0 10px 0;">
+          在此输入您想说的话，点确认将自动组装为 <code>我说：“……”</code> 填入下方输入框，方便您继续追加动作。
+        </p>
+        <div style="margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 0.8rem; color: #cbd5e0; align-self: center;">语气基调：</span>
+          <button type="button" class="btn btn-sm btn-silver speech-tone-btn active" data-tone="说">平述</button>
+          <button type="button" class="btn btn-sm btn-silver speech-tone-btn" data-tone="沉声问道">质问</button>
+          <button type="button" class="btn btn-sm btn-silver speech-tone-btn" data-tone="冷笑一声道">冷笑</button>
+          <button type="button" class="btn btn-sm btn-silver speech-tone-btn" data-tone="压低声音道">耳语低声</button>
+        </div>
+        <textarea id="input-speech-text" class="form-input" rows="3" placeholder="例如：昨晚三更你在账房见过谁？可曾留下字据？" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); color: #fff; font-size: 0.95rem; line-height: 1.5; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);"></textarea>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-silver" id="btn-cancel-speech" style="padding: 6px 14px;">取消</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline-cyan" id="btn-append-speech" style="padding: 6px 16px; font-weight: bold;">
+            📥 填入输入框 (可继续做动作)
+          </button>
+          <button class="btn btn-gold" id="btn-send-speech-direct" style="padding: 6px 16px; font-weight: bold;">
+            🚀 直接发出
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 模态框 12：快捷举止动作输入弹窗（免打“我做了”） -->
+  <div class="modal-overlay hidden" id="modal-action-input">
+    <div class="modal-window action-input-window" style="max-width: 540px; width: 92vw; background: #1a1e29; border: 1px solid rgba(212,175,55,0.4); box-shadow: 0 10px 45px rgba(0,0,0,0.9); border-radius: 8px;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(212,175,55,0.25); padding: 12px 18px;">
+        <h3 style="margin: 0; color: #f6d365; font-size: 1.15rem;">⚡ 行者举止 · 临场动作</h3>
+        <button class="btn-close-modal" id="btn-close-action-modal" style="background: none; border: none; color: #a0aec0; font-size: 1.2rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <p style="font-size: 0.84rem; color: #a0aec0; margin: 0 0 10px 0;">
+          在此输入您想做的事情或举措，确认后将自动组装填入下方输入框，可与刚才说的对白无缝拼装。
+        </p>
+        <div style="margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 0.8rem; color: #cbd5e0; align-self: center;">动作前缀：</span>
+          <button type="button" class="btn btn-sm btn-silver action-prefix-btn active" data-prefix="我">独立举措</button>
+          <button type="button" class="btn btn-sm btn-silver action-prefix-btn" data-prefix="同时我">同时/边说边做</button>
+          <button type="button" class="btn btn-sm btn-silver action-prefix-btn" data-prefix="暗中我">暗中行事</button>
+          <button type="button" class="btn btn-sm btn-silver action-prefix-btn" data-prefix="趁对方不备，我">趁势突袭</button>
+        </div>
+        <textarea id="input-action-text" class="form-input" rows="3" placeholder="例如：借着倒茶的掩护，悄悄探手摸向案桌暗格；目光紧锁对方袖口。" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); color: #fff; font-size: 0.95rem; line-height: 1.5; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);"></textarea>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-silver" id="btn-cancel-action-modal" style="padding: 6px 14px;">取消</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline-gold" id="btn-append-action" style="padding: 6px 16px; font-weight: bold;">
+            📥 填入输入框 (拼装发送)
+          </button>
+          <button class="btn btn-gold" id="btn-send-action-direct" style="padding: 6px 16px; font-weight: bold;">
+            🚀 直接发出
+          </button>
+        </div>
       </div>
     </div>
   </div>

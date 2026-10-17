@@ -4400,6 +4400,206 @@ function initRestAndLevelUp() {
   }
 }
 
+// =========================================================
+// 12.1 言行双枢 · 快捷对白与动作输入控制器 (Speech & Action Modals)
+// =========================================================
+
+function initSpeechAndActionModals() {
+  const inputAction = document.getElementById("input-action");
+
+  // --- 1. 快捷对白模态框 (说) ---
+  const speechModal = document.getElementById("modal-speech-input");
+  const btnOpenSpeech = document.getElementById("btn-open-speech-modal");
+  const btnCloseSpeech = document.getElementById("btn-close-speech-modal");
+  const btnCancelSpeech = document.getElementById("btn-cancel-speech");
+  const btnAppendSpeech = document.getElementById("btn-append-speech");
+  const btnSendSpeechDirect = document.getElementById("btn-send-speech-direct");
+  const inputSpeechText = document.getElementById("input-speech-text");
+  const toneBtns = document.querySelectorAll(".speech-tone-btn");
+
+  let currentTone = "说";
+
+  toneBtns.forEach(btn => {
+    btn.onclick = () => {
+      toneBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentTone = btn.getAttribute("data-tone") || "说";
+    };
+  });
+
+  const openSpeechModal = () => {
+    if (!speechModal) return;
+    speechModal.classList.remove("hidden");
+    if (inputSpeechText) {
+      inputSpeechText.value = "";
+      setTimeout(() => inputSpeechText.focus(), 100);
+    }
+  };
+
+  const closeSpeechModal = () => {
+    if (speechModal) speechModal.classList.add("hidden");
+  };
+
+  if (btnOpenSpeech) btnOpenSpeech.onclick = openSpeechModal;
+  if (btnCloseSpeech) btnCloseSpeech.onclick = closeSpeechModal;
+  if (btnCancelSpeech) btnCancelSpeech.onclick = closeSpeechModal;
+
+  const getFormattedSpeech = () => {
+    if (!inputSpeechText) return "";
+    const raw = inputSpeechText.value.trim();
+    if (!raw) return "";
+    const clean = raw.replace(/^["“'「]+|["”'」]+$/g, ''); // 清除多余引号
+    if (currentTone === "说") {
+      return `我说：“${clean}”`;
+    } else {
+      return `我${currentTone}：“${clean}”`;
+    }
+  };
+
+  // 填入输入框（方便边说边做）
+  if (btnAppendSpeech) {
+    btnAppendSpeech.onclick = () => {
+      const formatted = getFormattedSpeech();
+      if (!formatted) return;
+      closeSpeechModal();
+
+      if (inputAction) {
+        const cur = inputAction.value.trim();
+        if (cur) {
+          inputAction.value = `${cur} ${formatted}`;
+        } else {
+          inputAction.value = formatted;
+        }
+        inputAction.focus();
+        inputAction.setSelectionRange(inputAction.value.length, inputAction.value.length);
+      }
+    };
+  }
+
+  // 直接发送
+  if (btnSendSpeechDirect) {
+    btnSendSpeechDirect.onclick = () => {
+      const formatted = getFormattedSpeech();
+      if (!formatted) return;
+      closeSpeechModal();
+
+      let finalText = formatted;
+      if (inputAction && inputAction.value.trim()) {
+        finalText = `${inputAction.value.trim()} ${formatted}`;
+        inputAction.value = "";
+      }
+      sendPlayerAction(finalText);
+    };
+  }
+
+  // 支持在对白输入框按 Enter 快捷填入
+  if (inputSpeechText) {
+    inputSpeechText.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (btnAppendSpeech) btnAppendSpeech.click();
+      }
+    };
+  }
+
+  // --- 2. 快捷举止动作模态框 (动作) ---
+  const actionModal = document.getElementById("modal-action-input");
+  const btnOpenAction = document.getElementById("btn-open-action-modal");
+  const btnCloseAction = document.getElementById("btn-close-action-modal");
+  const btnCancelAction = document.getElementById("btn-cancel-action-modal");
+  const btnAppendAction = document.getElementById("btn-append-action");
+  const btnSendActionDirect = document.getElementById("btn-send-action-direct");
+  const inputActionText = document.getElementById("input-action-text");
+  const prefixBtns = document.querySelectorAll(".action-prefix-btn");
+
+  let currentPrefix = "我";
+
+  prefixBtns.forEach(btn => {
+    btn.onclick = () => {
+      prefixBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentPrefix = btn.getAttribute("data-prefix") || "我";
+    };
+  });
+
+  const openActionModal = () => {
+    if (!actionModal) return;
+    actionModal.classList.remove("hidden");
+    if (inputActionText) {
+      inputActionText.value = "";
+      setTimeout(() => inputActionText.focus(), 100);
+    }
+  };
+
+  const closeActionModal = () => {
+    if (actionModal) actionModal.classList.add("hidden");
+  };
+
+  if (btnOpenAction) btnOpenAction.onclick = openActionModal;
+  if (btnCloseAction) btnCloseAction.onclick = closeActionModal;
+  if (btnCancelAction) btnCancelAction.onclick = closeActionModal;
+
+  const getFormattedAction = () => {
+    if (!inputActionText) return "";
+    let raw = inputActionText.value.trim();
+    if (!raw) return "";
+
+    // 智能去除重复前缀
+    if (currentPrefix === "我" && raw.startsWith("我")) {
+      return raw;
+    } else if (currentPrefix !== "我" && raw.startsWith("我")) {
+      raw = raw.replace(/^我\s*/, '');
+    }
+    return `${currentPrefix}${raw}`;
+  };
+
+  // 填入输入框（拼装发送）
+  if (btnAppendAction) {
+    btnAppendAction.onclick = () => {
+      const formatted = getFormattedAction();
+      if (!formatted) return;
+      closeActionModal();
+
+      if (inputAction) {
+        const cur = inputAction.value.trim();
+        if (cur) {
+          inputAction.value = `${cur} ${formatted}`;
+        } else {
+          inputAction.value = formatted;
+        }
+        inputAction.focus();
+        inputAction.setSelectionRange(inputAction.value.length, inputAction.value.length);
+      }
+    };
+  }
+
+  // 直接发送
+  if (btnSendActionDirect) {
+    btnSendActionDirect.onclick = () => {
+      const formatted = getFormattedAction();
+      if (!formatted) return;
+      closeActionModal();
+
+      let finalText = formatted;
+      if (inputAction && inputAction.value.trim()) {
+        finalText = `${inputAction.value.trim()} ${formatted}`;
+        inputAction.value = "";
+      }
+      sendPlayerAction(finalText);
+    };
+  }
+
+  // 支持在动作输入框按 Enter 快捷填入
+  if (inputActionText) {
+    inputActionText.onkeydown = (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (btnAppendAction) btnAppendAction.click();
+      }
+    };
+  }
+}
+
 function handleInnRestAction() {
   const c = state.character;
   if (!c) return;
@@ -4528,6 +4728,9 @@ function initApp() {
   if (typeof ParticleFX !== "undefined") {
     ParticleFX.init();
   }
+
+  // 2.6 初始化言行双枢快捷模态框 (说 / 动作)
+  initSpeechAndActionModals();
 
   // 3. 初始化车卡向导与设置模态框
   initCharacterWizard();
