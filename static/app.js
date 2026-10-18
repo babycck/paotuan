@@ -697,6 +697,7 @@ function initNpcRosterModal() {
 }
 
 // 3. 突破行动智能建议胶囊渲染器
+// 3. 智斗突破行动智能建议胶囊渲染器 (支持 3 个横排高质量卡片)
 function renderActionSuggestions(suggestions) {
   const container = document.getElementById("action-suggestions-row");
   const inputAction = document.getElementById("input-action");
@@ -709,20 +710,64 @@ function renderActionSuggestions(suggestions) {
   }
 
   container.innerHTML = "";
-  suggestions.slice(0, 2).forEach(sugg => {
-    const pill = document.createElement("button");
-    pill.type = "button";
-    pill.className = "suggestion-pill";
-    pill.textContent = sugg;
-    pill.title = "点击直接采纳并填入行动意图输入框";
-    pill.onclick = () => {
-      if (inputAction) {
-        inputAction.value = sugg;
-        inputAction.focus();
-      }
-    };
-    container.appendChild(pill);
+  // 最多渲染 3 个横排智斗谋略卡片
+  suggestions.slice(0, 3).forEach((sugg, idx) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "action-capsule-btn";
+
+    // 判断是结构化对象还是普通字符串
+    if (typeof sugg === "object" && sugg !== null) {
+      const title = sugg.title || `谋策 ${idx + 1}`;
+      const desc = sugg.desc || sugg.title || "";
+      const skill = sugg.skill || "智慧推演";
+      const dcText = sugg.dc ? `对抗 DC ${sugg.dc}` : "见机行事";
+      const bonusText = sugg.bonus ? `(+${sugg.bonus})` : "";
+
+      card.innerHTML = `
+        <div class="capsule-header">
+          <span class="capsule-title">【${title}】</span>
+          <span class="capsule-skill-tag">${skill} ${bonusText}</span>
+        </div>
+        <div class="capsule-desc">${desc}</div>
+        <div class="capsule-dc">
+          <span>🎯 ${dcText}</span>
+          <span style="color:#d4af37;">点击执行 ↵</span>
+        </div>
+      `;
+
+      card.onclick = () => {
+        if (inputAction) {
+          const actionText = `【${title}】：${desc}`;
+          inputAction.value = actionText;
+          inputAction.focus();
+        }
+      };
+    } else {
+      // 兼容历史纯文本格式
+      const text = String(sugg);
+      card.innerHTML = `
+        <div class="capsule-header">
+          <span class="capsule-title">【意图选择】</span>
+          <span class="capsule-skill-tag">顺水推舟</span>
+        </div>
+        <div class="capsule-desc">${text}</div>
+        <div class="capsule-dc">
+          <span>🎯 即刻推进</span>
+          <span style="color:#d4af37;">采纳 ↵</span>
+        </div>
+      `;
+      card.onclick = () => {
+        if (inputAction) {
+          inputAction.value = text;
+          inputAction.focus();
+        }
+      };
+    }
+
+    container.appendChild(card);
   });
+
   container.classList.remove("hidden");
 }
 
@@ -4095,12 +4140,12 @@ const CombatGrid = {
     }
   },
 
-  // 战斗开启 (唯战斗触发时自动展开沙盘)
+  // 跑团 V1.0：全面转向纯文字智斗与技能对抗，不再切入 5 尺战棋沙盘
   startCombat(combatData) {
     this.initOrUpdate(combatData);
-    this.show();
-    audio.playDiceRoll();
-    this.updateMeter(`⚔️ 【交锋打响】：遭遇 [${this.state.enemies[0]?.name || '敌手'}]！可在下方打字描述你的战术走位与出手动作。`);
+    // 彻底静默战棋网格面板展示，仅保留数据支持
+    this.hide();
+    audio.playAlert();
   },
 
   // 战斗回合更新 (走位与气血实时同步)
@@ -4871,18 +4916,107 @@ function initApp() {
   initCharacterWizard();
   initSettingsModal();
 
-  // 3. 移动端抽屉开关
-  const leftPanel = document.getElementById("panel-tactical");
-  const rightPanel = document.getElementById("panel-codex");
-  const btnToggleLeft = document.getElementById("btn-toggle-left");
-  const btnToggleRight = document.getElementById("btn-toggle-right");
-  const btnCloseLeft = document.getElementById("btn-close-left");
-  const btnCloseRight = document.getElementById("btn-close-right");
+  // 3. 跑团 V1.0 架构：左侧磁吸功能条 (Rail Nav) 与 覆盖式大抽屉管理
+  const tacticalDrawer = document.getElementById("panel-tactical");
+  const drawerBackdrop = document.getElementById("drawer-backdrop");
+  const btnCloseDrawer = document.getElementById("btn-close-drawer");
+  const drawerTitle = document.getElementById("drawer-title");
+  const drawerTag = document.getElementById("drawer-tag");
+  const subtabsRow = document.getElementById("drawer-subtabs-row");
 
-  if (btnToggleLeft) btnToggleLeft.onclick = () => leftPanel.classList.toggle("open");
-  if (btnToggleRight) btnToggleRight.onclick = () => rightPanel.classList.toggle("open");
-  if (btnCloseLeft) btnCloseLeft.onclick = () => leftPanel.classList.remove("open");
-  if (btnCloseRight) btnCloseRight.onclick = () => rightPanel.classList.remove("open");
+  let currentActiveDrawer = null;
+
+  function openDrawer(targetDrawer) {
+    if (!tacticalDrawer) return;
+
+    // 若再次点击已激活的抽屉，则收起 (Toggle 逻辑)
+    if (currentActiveDrawer === targetDrawer && tacticalDrawer.classList.contains("drawer-open")) {
+      closeDrawer();
+      return;
+    }
+
+    currentActiveDrawer = targetDrawer;
+    tacticalDrawer.classList.add("drawer-open");
+    if (drawerBackdrop) drawerBackdrop.classList.add("active");
+
+    // 更新磁吸条发光高亮 (点击背景高亮明确反馈)
+    document.querySelectorAll(".rail-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.drawer === targetDrawer);
+    });
+
+    // 隐藏抽屉内部所有主页面与二级容器
+    document.querySelectorAll(".drawer-subtab-page, .drawer-main-page").forEach(el => el.classList.add("hidden"));
+
+    if (targetDrawer === "profile") {
+      if (drawerTitle) drawerTitle.textContent = "行者命盘 · 战术面板";
+      if (drawerTag) drawerTag.textContent = "PF1e 命契";
+      if (subtabsRow) subtabsRow.classList.remove("hidden");
+      switchSubtab("profile-stats");
+    } else if (targetDrawer === "map") {
+      if (drawerTitle) drawerTitle.textContent = "舆图沙盘 · 府邸全景";
+      if (drawerTag) drawerTag.textContent = "地理虚实";
+      if (subtabsRow) subtabsRow.classList.add("hidden");
+      const page = document.getElementById("drawer-page-map");
+      if (page) page.classList.remove("hidden");
+    } else if (targetDrawer === "chronicles") {
+      if (drawerTitle) drawerTitle.textContent = "纪事卷宗 · 夺权破局录";
+      if (drawerTag) drawerTag.textContent = "主线纲要";
+      if (subtabsRow) subtabsRow.classList.add("hidden");
+      const page = document.getElementById("drawer-page-chronicles");
+      if (page) page.classList.remove("hidden");
+    } else if (targetDrawer === "hints") {
+      if (drawerTitle) drawerTitle.textContent = "司命妙计 · 智囊参谋";
+      if (drawerTag) drawerTag.textContent = "天道推演";
+      if (subtabsRow) subtabsRow.classList.add("hidden");
+      const page = document.getElementById("drawer-page-hints");
+      if (page) page.classList.remove("hidden");
+    }
+  }
+
+  function closeDrawer() {
+    if (!tacticalDrawer) return;
+    tacticalDrawer.classList.remove("drawer-open");
+    if (drawerBackdrop) drawerBackdrop.classList.remove("active");
+    document.querySelectorAll(".rail-btn").forEach(btn => btn.classList.remove("active"));
+    currentActiveDrawer = null;
+  }
+
+  function switchSubtab(subtabKey) {
+    document.querySelectorAll(".drawer-subtab-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.subtab === subtabKey);
+    });
+    document.querySelectorAll(".drawer-subtab-page").forEach(el => el.classList.add("hidden"));
+    const targetPage = document.getElementById(`subtab-page-${subtabKey}`);
+    if (targetPage) targetPage.classList.remove("hidden");
+  }
+
+  // 绑定磁吸导航按钮
+  document.querySelectorAll(".rail-btn").forEach(btn => {
+    btn.onclick = () => {
+      const drawerType = btn.dataset.drawer;
+      if (drawerType === "settings") {
+        const modal = document.getElementById("modal-settings");
+        if (modal) modal.classList.remove("hidden");
+      } else {
+        openDrawer(drawerType);
+      }
+    };
+  });
+
+  // 绑定二级分段药丸按钮 (命格属性 / 随身锦囊 / 人脉把柄)
+  document.querySelectorAll(".drawer-subtab-btn").forEach(btn => {
+    btn.onclick = () => {
+      switchSubtab(btn.dataset.subtab);
+    };
+  });
+
+  // 绑定抽屉关闭与背景点击
+  if (btnCloseDrawer) btnCloseDrawer.onclick = closeDrawer;
+  if (drawerBackdrop) drawerBackdrop.onclick = closeDrawer;
+
+  // 移动端兼容
+  const btnToggleLeft = document.getElementById("btn-toggle-left");
+  if (btnToggleLeft) btnToggleLeft.onclick = () => openDrawer("profile");
 
   // 4. 行动声明发送逻辑 (Enter 发送, Shift+Enter 换行) 与 建议即时收录
   const inputAction = document.getElementById("input-action");

@@ -41,17 +41,56 @@
     </div>
   </header>
 
-  <!-- 主体工作台三栏布局 -->
+  <!-- 主体工作台三栏布局 (iPad横屏 磁吸功能条 + 覆盖式大抽屉 + 纯粹文字流) -->
   <main class="workbench-container">
-    <!-- 左栏：PF1e 战术人物卡面板 (遵循 CSV 权威标准模版) -->
+    <!-- 1. 左侧磁吸导航窄条 (仅 64px) -->
+    <nav class="rail-nav" id="rail-nav">
+      <button class="rail-btn" id="btn-rail-profile" data-drawer="profile" title="命盘 (属性/六维/锦囊/人脉)">
+        <div class="rail-btn-icon">👑</div>
+        <span class="rail-btn-label">命盘</span>
+      </button>
+      <button class="rail-btn" id="btn-rail-map" data-drawer="map" title="舆图 (宫廷/府邸/城防全景)">
+        <div class="rail-btn-icon">🗺️</div>
+        <span class="rail-btn-label">舆图</span>
+      </button>
+      <button class="rail-btn" id="btn-rail-chronicles" data-drawer="chronicles" title="纪事 (章节卷宗/主线进展)">
+        <div class="rail-btn-icon">📖</div>
+        <span class="rail-btn-label">纪事</span>
+      </button>
+      <button class="rail-btn" id="btn-rail-hints" data-drawer="hints" title="妙计 (司命点拨/破局思路)">
+        <div class="rail-btn-icon">💡</div>
+        <span class="rail-btn-label">妙计</span>
+      </button>
+      <div style="flex:1;"></div>
+      <button class="rail-btn" id="btn-rail-settings" data-drawer="settings" title="乾坤 (司命心印/存读档/设置)">
+        <div class="rail-btn-icon">⚙️</div>
+        <span class="rail-btn-label">乾坤</span>
+      </button>
+    </nav>
+
+    <!-- 2. 覆盖式大抽屉遮罩背景 -->
+    <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+    <!-- 3. 左栏覆盖式大抽屉：PF1e 命盘/锦囊/人脉/舆图/纪事/妙计 -->
     <aside class="panel tactical-panel" id="panel-tactical">
-      <div class="panel-header">
-        <span class="panel-tag">PF1e 命契</span>
-        <h2>行者档案 · 战术面板</h2>
-        <button class="btn-close-drawer mobile-only" id="btn-close-left">✕</button>
+      <div class="panel-header drawer-header">
+        <div class="drawer-header-left">
+          <span class="panel-tag" id="drawer-tag">PF1e 命契</span>
+          <h2 id="drawer-title" style="margin:0; font-size:1.05rem;">行者命盘 · 战术面板</h2>
+        </div>
+        <button class="btn-close-drawer" id="btn-close-drawer" title="收起抽屉">✕</button>
       </div>
 
-      <div class="panel-content scrollable">
+      <!-- 命盘二级分段药丸导航 (命盘把锦囊与人脉全部整合在内) -->
+      <div class="drawer-subtabs-row" id="drawer-subtabs-row">
+        <button class="drawer-subtab-btn active" data-subtab="profile-stats">👑 命格属性</button>
+        <button class="drawer-subtab-btn" data-subtab="profile-bag">🎒 随身锦囊</button>
+        <button class="drawer-subtab-btn" data-subtab="profile-bonds">👥 人脉把柄</button>
+      </div>
+
+      <div class="panel-content scrollable" id="drawer-content-scrollable">
+        <!-- 子容器 1: 命格属性核心 (完整保留原战术卡 DOM ID) -->
+        <div class="drawer-subtab-page active" id="subtab-page-profile-stats">
         <!-- 身份档案卡 -->
         <section class="card profile-card">
           <div class="profile-hero">
@@ -268,7 +307,166 @@
             <!-- 动态渲染技能条目 -->
           </ul>
         </section>
-      </div>
+
+        <!-- 掌中秘术 · 道法天书专区 (施法职业激活) -->
+        <section class="card spells-card" id="card-spells" style="margin-top: 12px; margin-bottom: 12px;">
+          <div class="section-title-row">
+            <h4 style="color: #f6d365;">📖 掌中秘术 · 道法天书</h4>
+            <span class="badge badge-gold" id="spell-slots-badge">法术位: 1环 2/2</span>
+          </div>
+          <div class="spells-body" id="spells-list-container">
+            <!-- 动态渲染已知法术列表 -->
+          </div>
+        </section>
+
+        <!-- 35 项核心技能全景矩阵 (一排 3 个小按钮) -->
+        <section class="card all-skills-card" id="card-all-skills" style="margin-bottom: 12px;">
+          <div class="section-title-row">
+            <h4 style="color: #f6d365;">🎯 35项核心技能矩阵 (一键查值/投骰)</h4>
+            <span class="badge badge-dim">点击带加值投骰</span>
+          </div>
+          <p style="font-size: 0.75rem; color: #a0aec0; margin: 4px 0 8px;">
+            自动计入<strong>本职+3</strong>与<strong>穿甲减值 ACP</strong>：
+          </p>
+          <div class="skills-matrix-grid" id="skills-matrix-grid">
+            <!-- 动态渲染 35 项技能小按钮 -->
+          </div>
+        </section>
+
+        <!-- PF1e 核心规则速查卡 -->
+        <section class="card rules-quick-card">
+          <h4>📜 PF1e 核心规则速览</h4>
+          <ul class="quick-rules-list">
+            <li><strong>检定克制门禁</strong>：常规交谈、日常查看直接推进；唯险局与重大阻力方始索骰。</li>
+            <li><strong>本职技能</strong>：投入点数享有 <code>+3</code> 胜任加值。</li>
+            <li><strong>穿甲减值 (ACP)</strong>：已在特技/攀爬/隐匿等8项物理技能中严格扣除。</li>
+            <li><strong>变卦机制</strong>：索骰横幅弹出后，可随时零惩罚撤销换策略。</li>
+            <li><strong>致命重击</strong>：出目达到 19-20 触发威胁，自动二次确认命中。</li>
+            <li><strong>伤残与濒死</strong>：HP为0瘫痪；低于0昏迷，负值达体质总值方始陨落。</li>
+          </ul>
+        </section>
+        </div><!-- /#subtab-page-profile-stats -->
+
+        <!-- 子容器 2: 随身锦囊 (道具/行囊/资产) -->
+        <div class="drawer-subtab-page hidden" id="subtab-page-profile-bag">
+          <section class="card inventory-summary-card" id="card-inventory-summary" style="padding: 12px 14px; margin-bottom: 12px;">
+            <div class="section-title-row" style="margin-bottom: 8px;">
+              <h4 style="margin: 0; font-size: 0.95rem; color:#f6d365;">🎒 随身装具与百宝匣</h4>
+              <button class="btn btn-gold btn-small" id="btn-open-inventory" style="padding: 3px 10px; font-size: 0.78rem;">展开行囊</button>
+            </div>
+            <div class="inv-summary-body" style="font-size: 0.82rem; line-height: 1.5; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+              <div><strong style="color: #cbd5e0;">兵器防具：</strong><span id="summary-weapon" style="color: #f6d365;">长剑 (1d8)</span> · <span id="summary-armor" style="color: #cbd5e0;">链甲衫 (AC+4)</span></div>
+              <div style="margin-top: 4px;"><strong style="color: #cbd5e0;">道具锦囊：</strong><span id="summary-item-count" style="color: #a0aec0;">银针、急救灵药、随身信物...</span></div>
+            </div>
+          </section>
+
+          <section class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+            <div class="section-title-row" style="margin-bottom: 8px;">
+              <h4 style="margin: 0; font-size: 0.92rem; color:#cbd5e0;">🪙 资财与负重</h4>
+              <button class="btn btn-silver btn-small" id="btn-open-market" style="padding: 2px 8px; font-size: 0.75rem;">🛒 采办采买</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:#f6d365; margin-bottom:6px;">
+              <span>银钱资产：<strong id="drawer-wallet-val">150 GP</strong></span>
+              <span id="drawer-load-badge" style="color:#a0aec0;">轻载 35/66 磅</span>
+            </div>
+          </section>
+
+          <section class="card" style="padding: 12px 14px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 0.92rem; color:#f6d365;">✨ 常用奇物与应急锦囊</h4>
+            <div id="drawer-quick-items-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 0.8rem; color: #a0aec0; background: rgba(20,24,35,0.6); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="color: #e2e8f0; font-weight: 500;">🧪 轻伤解毒散</span>
+                  <div style="font-size: 0.72rem; color: #718096;">迅速化解附子与乌头微毒</div>
+                </div>
+                <span class="badge badge-dim">x2</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #a0aec0; background: rgba(20,24,35,0.6); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="color: #e2e8f0; font-weight: 500;">🪡 试毒纯银细簪</span>
+                  <div style="font-size: 0.72rem; color: #718096;">遇毒即黑，自证清白必备</div>
+                </div>
+                <span class="badge badge-gold">随身信物</span>
+              </div>
+            </div>
+          </section>
+        </div><!-- /#subtab-page-profile-bag -->
+
+        <!-- 子容器 3: 人脉把柄 (结缘人物谱与秘密把柄) -->
+        <div class="drawer-subtab-page hidden" id="subtab-page-profile-bonds">
+          <div style="padding: 4px 0 10px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size: 0.8rem; color: #a0aec0;">已结缘人脉与暗中探知的把柄秘密</span>
+            <button class="btn btn-silver btn-small" id="btn-drawer-open-roster" style="padding: 2px 8px; font-size: 0.75rem;">👥 全景人物谱</button>
+          </div>
+          <div id="drawer-bonds-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- 动态渲染当前篇章人物好感与把柄 -->
+          </div>
+        </div><!-- /#subtab-page-profile-bonds -->
+
+        <!-- 独立主页面 4: 舆图沙盘 (宫廷/府邸/城防全景) -->
+        <div class="drawer-main-page hidden" id="drawer-page-map">
+          <div class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+            <div class="section-title-row" style="margin-bottom: 6px;">
+              <h4 style="margin: 0; color: #f6d365;">🗺️ 宫闱府邸 · 舆图全景</h4>
+              <span class="badge badge-gold" id="map-current-loc-badge">当前位于：冷宫西偏殿</span>
+            </div>
+            <p style="font-size: 0.78rem; color: #a0aec0; margin: 4px 0 10px; line-height: 1.4;">
+              通过刺探与游走逐步点亮府邸暗道与防务虚实。
+            </p>
+            <div id="drawer-map-canvas" style="background: rgba(10,13,20,0.85); border: 1px dashed rgba(212,175,55,0.3); border-radius: 8px; padding: 16px; text-align: center; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;">
+              <div style="font-size: 2rem;">🏯</div>
+              <strong style="color: #e2e8f0; font-size: 0.9rem;" id="map-region-name">后宫内苑 · 冷翠宫</strong>
+              <div style="font-size: 0.75rem; color: #718096; max-width: 300px;">
+                【西偏殿】(当前避险地) ⇄ 【内务府药库】(守卫严密·DC14) ⇄ 【长春宫御道】(暗线交汇)
+              </div>
+              <div style="margin-top: 8px; font-size: 0.75rem; color: #f6d365;">
+                🔍 探索度：35% · 警惕等级：低
+              </div>
+            </div>
+          </div>
+        </div><!-- /#drawer-page-map -->
+
+        <!-- 独立主页面 5: 纪事卷宗 (章节目标/主线线索) -->
+        <div class="drawer-main-page hidden" id="drawer-page-chronicles">
+          <div class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+            <div class="section-title-row" style="margin-bottom: 6px;">
+              <h4 style="margin: 0; color: #f6d365;">📖 篇章纪事 · 夺权破局录</h4>
+              <span class="badge badge-crimson">第一章：破煞明冤</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #cbd5e0; line-height: 1.5; margin-top: 8px;">
+              <div style="margin-bottom: 6px;"><strong>🎯 当前核心意图：</strong>查出昨夜安神汤中‘牵机毒’的幕后真凶，反将一军。</div>
+              <div style="margin-bottom: 6px;"><strong>🔍 已掌握线索：</strong>
+                <ul style="margin: 4px 0 0 16px; padding: 0; color: #a0aec0;">
+                  <li>司药宫女翠儿眼神慌乱，袖口有残余药粉气味。</li>
+                  <li>内务府近三日并无砒霜领用记录，毒物系私自带入。</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div><!-- /#drawer-page-chronicles -->
+
+        <!-- 独立主页面 6: 妙计点拨 (司命推演/破局思路) -->
+        <div class="drawer-main-page hidden" id="drawer-page-hints">
+          <div class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+            <div class="section-title-row" style="margin-bottom: 6px;">
+              <h4 style="margin: 0; color: #f6d365;">💡 司命妙计 · 智囊参谋</h4>
+              <span class="badge badge-dim">无代价点拨</span>
+            </div>
+            <p style="font-size: 0.78rem; color: #a0aec0; margin: 4px 0 8px; line-height: 1.4;">
+              若深陷死局或缺乏头绪，可参详司命由天道推演所得之机锋：
+            </p>
+            <div id="drawer-hints-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+              <div style="background: rgba(212,175,55,0.08); border-left: 3px solid #f6d365; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #e2e8f0;">
+                <strong>妙计一【打草惊蛇】：</strong>故意声称毒汤已被送去太医院复核，观察各宫眼线的微表情（察言观色检定）。
+              </div>
+              <div style="background: rgba(99,179,237,0.08); border-left: 3px solid #63b3ed; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #e2e8f0;">
+                <strong>妙计二【偷梁换柱】：</strong>用无害的葛粉调换对方的指证物证，令其当殿自乱阵脚（巧手检定）。
+              </div>
+            </div>
+          </div>
+        </div><!-- /#drawer-page-hints -->
+
+      </div><!-- /#drawer-content-scrollable -->
     </aside>
 
     <!-- 中栏：纯文字脑内剧场与自由叙事 -->
@@ -376,67 +574,8 @@
       </footer>
     </section>
 
-    <!-- 右栏：全量技能矩阵、道法天书与规则法典 -->
-    <aside class="panel codex-panel" id="panel-codex">
-      <div class="panel-header">
-        <span class="panel-tag">命途法典</span>
-        <h2>行者秘术 · 全量技能与道法</h2>
-        <button class="btn-close-drawer mobile-only" id="btn-close-right">✕</button>
-      </div>
-
-      <div class="panel-content scrollable">
-        <!-- 随身行囊与装备极简卡片 -->
-        <section class="card inventory-summary-card" id="card-inventory-summary" style="padding: 10px 14px; margin-bottom: 12px;">
-          <div class="section-title-row" style="margin-bottom: 6px;">
-            <h4 style="margin: 0; font-size: 0.92rem;">🎒 随身装具与百宝匣</h4>
-            <button class="btn btn-gold btn-small" id="btn-open-inventory" style="padding: 2px 10px; font-size: 0.78rem;">展开行囊</button>
-          </div>
-          <div class="inv-summary-body" style="font-size: 0.8rem; line-height: 1.4;">
-            <span id="summary-weapon" style="color: #f6d365;">长剑 (1d8)</span> · 
-            <span id="summary-armor" style="color: #cbd5e0;">链甲衫 (AC+4)</span> · 
-            <span id="summary-item-count" style="color: #a0aec0;">轻伤药水x2...</span>
-          </div>
-        </section>
-
-        <!-- 掌中秘术 · 道法天书专区 (施法职业激活) -->
-        <section class="card spells-card" id="card-spells" style="margin-bottom: 12px;">
-          <div class="section-title-row">
-            <h4 style="color: #f6d365;">📖 掌中秘术 · 道法天书</h4>
-            <span class="badge badge-gold" id="spell-slots-badge">法术位: 1环 2/2</span>
-          </div>
-          <div class="spells-body" id="spells-list-container">
-            <!-- 动态渲染已知法术列表，包含法术描述与【✨ 施展】按钮 -->
-          </div>
-        </section>
-
-        <!-- 35 项核心技能全景矩阵 (一排 3 个小按钮) -->
-        <section class="card all-skills-card" id="card-all-skills" style="margin-bottom: 12px;">
-          <div class="section-title-row">
-            <h4 style="color: #f6d365;">🎯 35项核心技能矩阵 (一键查值/投骰)</h4>
-            <span class="badge badge-dim">点击带加值投骰</span>
-          </div>
-          <p style="font-size: 0.75rem; color: #a0aec0; margin: 4px 0 8px;">
-            自动计入<strong>本职+3</strong>与<strong>穿甲减值 ACP</strong>。点击任意小按钮即可查看算式构成或直接发起检定：
-          </p>
-          <div class="skills-matrix-grid" id="skills-matrix-grid">
-            <!-- 动态渲染 35 项技能小按钮，一排 3 个 -->
-          </div>
-        </section>
-
-        <!-- PF1e 核心规则速查卡 -->
-        <section class="card rules-quick-card">
-          <h4>📜 PF1e 核心规则速览</h4>
-          <ul class="quick-rules-list">
-            <li><strong>检定克制门禁</strong>：常规交谈、日常查看直接推进；唯险局与重大阻力方始索骰。</li>
-            <li><strong>本职技能</strong>：投入点数享有 <code>+3</code> 胜任加值。</li>
-            <li><strong>穿甲减值 (ACP)</strong>：已在特技/攀爬/隐匿等8项物理技能中严格扣除。</li>
-            <li><strong>变卦机制</strong>：索骰横幅弹出后，可随时零惩罚撤销换策略。</li>
-            <li><strong>致命重击</strong>：出目达到 19-20 触发威胁，自动二次确认命中。</li>
-            <li><strong>伤残与濒死</strong>：HP为0瘫痪；低于0昏迷，负值达体质总值方始陨落。</li>
-          </ul>
-        </section>
-      </div>
-    </aside>
+    <!-- 右栏占位 (已完全迁入左侧大抽屉，保持隐藏以防历史脚本空指针) -->
+    <aside class="panel codex-panel hidden" id="panel-codex" style="display:none !important;"></aside>
   </main>
 
   <!-- 模态框 1：AI 司命问询式降噪车卡向导 -->
