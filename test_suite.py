@@ -46,7 +46,8 @@ def test_talents_library():
         print(f"  ✓ 核心神技【{t}】校验存在")
     
     # 统计条目数
-    count = text.count("id:")
+    count = text.count("id:") + text.count('"id":')
+    assert count == 100, f"神技总数异常: {count} 项"
     print(f"  ✓ 天命神技总条目数确认: {count} 项 (标准满库 100 项)")
 
 def test_system_prompt_builder():

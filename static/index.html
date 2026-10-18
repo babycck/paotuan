@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>《蘑菇灯沉浸跑团》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261019_06">
+  <link rel="stylesheet" href="style.css?v=20261019_07">
 
 </head>
 <body class="ink-theme">
@@ -631,7 +631,7 @@
         </div>
 
         <!-- 0.5 角色命讳 (支持自由输入与随机一键赐名，彻底杜绝女叫男名) -->
-        <div class="reincarnate-section" style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+        <div class="reincarnate-section" style="margin-bottom: 10px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
           <div style="font-weight: bold; color: #f6d365; font-size: 0.88rem; white-space: nowrap;">
             <span>🏷️ 降世尊讳大名：</span>
           </div>
@@ -643,6 +643,18 @@
           </div>
         </div>
 
+        <!-- 0.6 降世尊崇身份 (涵盖娘娘/帝皇/客栈老板娘/盟主/神捕等 320+ 超丰富身份) -->
+        <div class="reincarnate-section" style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="font-weight: bold; color: #f6d365; font-size: 0.88rem; white-space: nowrap;">
+            <span>🎭 降世尊崇身份：</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end;">
+            <input type="text" id="wizard-char-identity" class="form-input" value="母仪天下正宫皇后" placeholder="可随意手填或点击右侧摇身份..." style="flex: 1; max-width: 250px; padding: 4px 10px; font-size: 0.86rem; background: #0d1017; border: 1px solid rgba(212,175,55,0.4); color: #f6d365; border-radius: 6px; text-align: center; font-weight: bold;">
+            <button type="button" class="btn btn-gold btn-small" id="btn-roll-identity" title="随心摇一个当前世界与性别的高阶特色身份" style="padding: 4px 10px; font-size: 0.8rem; white-space: nowrap;">
+              🎲 随心摇身份
+            </button>
+          </div>
+        </div>
 
         <!-- 1. 挑选大千世界宏观大类 (8 选 1) -->
         <div class="reincarnate-section" style="margin-bottom: 18px;">
@@ -654,42 +666,42 @@
             <div class="world-card active" data-world="古代宫闱 · 深宫弄权" style="background:rgba(20,24,35,0.85); border:1px solid #f6d365; border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">👑</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#f6d365; margin-top:4px;">古代宫闱</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">冷宫/废妃/宫女</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">皇后/贵妃/皇上/长公主</div>
             </div>
             <div class="world-card" data-world="江湖草莽 · 市井奇谋" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🗡️</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">江湖草莽</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">客栈/柴房/小厮</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">客栈老板娘/盟主/神捕/舵主</div>
             </div>
             <div class="world-card" data-world="现代都市 · 职场商战" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🏢</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">现代都市</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">大厂/保洁/后勤</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">千亿女总裁/财阀继承人/合伙人</div>
             </div>
             <div class="world-card" data-world="末世废土 · 秩序崩塌" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">☣️</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">末世废土</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">便利店/拾荒/机修</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">避难城执政官/军阀军火领袖</div>
             </div>
             <div class="world-card" data-world="民国悬疑 · 谍海迷雾" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🕵️</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">民国谍影</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">舞厅/杂工/侍应</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">百乐门老板娘/双面间谍/少帅</div>
             </div>
             <div class="world-card" data-world="诡秘异闻 · 中式微恐" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🕯️</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">诡秘异闻</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">义庄/扎纸/守夜</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">天师掌教/鬼市之主/通灵巫仙</div>
             </div>
             <div class="world-card" data-world="大学校园 · 青春解谜" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🎓</div>
               <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">象牙之塔</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">自习室/实验/宿管</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">理事长千金/科研首席/特聘教授</div>
             </div>
             <div class="world-card" data-world="科幻星际 · 赛博底层" style="background:rgba(20,24,35,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 8px; text-align:center; cursor:pointer;">
               <div style="font-size:1.5rem;">🤖</div>
-              <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">赛博底层</div>
-              <div style="font-size:0.7rem; color:#a0aec0;">清道夫/诊所学徒</div>
+              <div style="font-size:0.82rem; font-weight:bold; color:#cbd5e0; margin-top:4px;">赛博星际</div>
+              <div style="font-size:0.7rem; color:#a0aec0;">垄断财阀CEO/星舰舰长/黑客领袖</div>
             </div>
           </div>
         </div>
@@ -1176,7 +1188,7 @@
   <canvas id="fx-canvas" class="fx-canvas-overlay"></canvas>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261019_06"></script>
+  <script src="app.js?v=20261019_07"></script>
 
 </body>
 </html>
