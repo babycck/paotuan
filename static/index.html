@@ -612,6 +612,24 @@
       </div>
 
       <div class="wizard-body scrollable" style="flex:1; padding:16px 20px;">
+        <!-- 0. 性别定魄 (自由选择，后宫默认女) -->
+        <div class="reincarnate-section" style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-weight: bold; color: #f6d365; font-size: 0.88rem;">
+            <span>⚧️ 投胎肉身性别：</span>
+          </div>
+          <div class="gender-pill-group" id="gender-pill-group" style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-gold btn-small gender-pill-btn active" data-gender="女" style="padding: 4px 14px; font-weight: bold;">
+              ♀ 佳人 / 娇娥 (女)
+            </button>
+            <button type="button" class="btn btn-silver btn-small gender-pill-btn" data-gender="男" style="padding: 4px 14px;">
+              ♂ 行者 / 少侠 (男)
+            </button>
+            <button type="button" class="btn btn-silver btn-small gender-pill-btn" data-gender="随缘" style="padding: 4px 12px; color: #a0aec0;">
+              🎲 随缘盲盒
+            </button>
+          </div>
+        </div>
+
         <!-- 1. 挑选大千世界宏观大类 (8 选 1) -->
         <div class="reincarnate-section" style="margin-bottom: 18px;">
           <div style="font-weight:bold; color:#f6d365; font-size:0.92rem; margin-bottom:8px; display:flex; justify-content:space-between;">
@@ -683,13 +701,18 @@
           </small>
         </div>
 
-        <!-- 3. 觉醒天命神技 (100 项趣味金手指随机翻牌) -->
+        <!-- 3. 觉醒天命神技 (支持下拉随心自选，也支持一键随机抽取) -->
         <div class="reincarnate-section" style="margin-bottom: 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div style="font-weight:bold; color:#f6d365; font-size:0.92rem;">③ 觉醒天命神技 (百种神技随机翻牌)：</div>
-            <button class="btn btn-silver btn-small" id="btn-reroll-talent" style="padding:4px 12px; font-size:0.82rem; border-color:#f6d365; color:#f6d365;">
-              ✨ 重抽天命
-            </button>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
+            <div style="font-weight:bold; color:#f6d365; font-size:0.92rem; white-space:nowrap;">③ 觉醒天命神技：</div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <select id="select-destiny-talent" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; background: #0d1017; border: 1px solid rgba(212,175,55,0.4); color: #f6d365; max-width: 200px; border-radius: 6px;">
+                <!-- 动态装填 100 项神技 -->
+              </select>
+              <button class="btn btn-gold btn-small" id="btn-reroll-talent" style="padding:4px 12px; font-size:0.8rem; white-space:nowrap;">
+                🎲 随机摇神技
+              </button>
+            </div>
           </div>
 
           <!-- 翻牌展示卡片 -->

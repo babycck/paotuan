@@ -1848,16 +1848,72 @@ function initCharacterWizard() {
   const btnFinish = document.getElementById("btn-wizard-finish");
   const btnRollScores = document.getElementById("btn-roll-4d6k3");
   const btnRerollTalent = document.getElementById("btn-reroll-talent");
+  const selectTalent = document.getElementById("select-destiny-talent");
+  const genderBtns = document.querySelectorAll("#gender-pill-group .gender-pill-btn");
 
   if (!wizardModal) return;
 
-  // 默认选中的大千世界与当前抽中的天命神技
+  // 默认选中的大千世界、性别与当前抽中的天命神技
   let selectedWorld = "古代宫闱 · 深宫弄权";
+  let selectedGender = "女"; // 默认女，契合宫闱与细腻代入
   let currentTalent = (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0)
     ? window.DESTINY_TALENTS[34] // 默认第35个：百毒不侵
     : { id: 35, name: "百毒不侵", category: "肉身神异", icon: "🧪", desc: "吞服砒霜、断肠草等世间剧毒皆如甘露，不仅无恙，更能从指甲逼出毒液反噬他人。", trigger: "强韧/嚼毒反噬" };
 
-  // 更新神技展示卡片
+  // 1. 性别切换管理
+  function updateGenderUI(gender) {
+    selectedGender = gender;
+    if (genderBtns && genderBtns.length > 0) {
+      genderBtns.forEach(btn => {
+        const g = btn.dataset.gender;
+        if (g === gender) {
+          btn.classList.add("active", "btn-gold");
+          btn.classList.remove("btn-silver");
+          btn.style.fontWeight = "bold";
+          btn.style.color = "#1a202c";
+        } else {
+          btn.classList.remove("active", "btn-gold");
+          btn.classList.add("btn-silver");
+          btn.style.fontWeight = "normal";
+          btn.style.color = (g === "随缘") ? "#a0aec0" : "#cbd5e0";
+        }
+      });
+    }
+  }
+
+  if (genderBtns && genderBtns.length > 0) {
+    genderBtns.forEach(btn => {
+      btn.onclick = () => {
+        updateGenderUI(btn.dataset.gender || "女");
+        audio.playAlert();
+      };
+    });
+  }
+
+  // 2. 装填 100 种天命神技自选下拉列表
+  function populateTalentSelect() {
+    if (!selectTalent || !window.DESTINY_TALENTS || window.DESTINY_TALENTS.length === 0) return;
+    if (selectTalent.children.length > 0) return; // 已装填则不重复装填
+
+    const groups = {};
+    window.DESTINY_TALENTS.forEach(t => {
+      const cat = t.category || "神异流派";
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(t);
+    });
+
+    let html = "";
+    for (const cat in groups) {
+      html += `<optgroup label="── 【${cat}】 ──">`;
+      groups[cat].forEach(t => {
+        html += `<option value="${t.id}">${t.icon || '✨'} #${t.id} ${t.name}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+    selectTalent.innerHTML = html;
+  }
+
+  // 更新神技展示卡片并同步下拉选单
   function updateTalentCard(talent) {
     if (!talent) return;
     currentTalent = talent;
@@ -1874,6 +1930,10 @@ function initCharacterWizard() {
     if (descEl) descEl.textContent = talent.desc || "";
     if (trigEl) trigEl.textContent = `🎯 专属判定：${talent.trigger || '神技碾压'} (+8 碾压)`;
 
+    if (selectTalent && selectTalent.value != talent.id) {
+      selectTalent.value = talent.id;
+    }
+
     if (cardEl) {
       cardEl.style.transform = "scale(1.03)";
       cardEl.style.borderColor = "#f6d365";
@@ -1881,12 +1941,26 @@ function initCharacterWizard() {
     }
   }
 
+  // 下拉选框变更联动
+  if (selectTalent) {
+    selectTalent.onchange = () => {
+      const tid = parseInt(selectTalent.value, 10);
+      const found = window.DESTINY_TALENTS && window.DESTINY_TALENTS.find(t => t.id === tid);
+      if (found) {
+        updateTalentCard(found);
+        audio.playAlert();
+      }
+    };
+  }
+
   // 随机抽取天命神技
   function rollRandomTalent() {
     audio.playDiceRoll();
     if (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0) {
       const idx = Math.floor(Math.random() * window.DESTINY_TALENTS.length);
-      updateTalentCard(window.DESTINY_TALENTS[idx]);
+      const picked = window.DESTINY_TALENTS[idx];
+      updateTalentCard(picked);
+      if (selectTalent) selectTalent.value = picked.id;
     }
   }
 
@@ -1915,6 +1989,8 @@ function initCharacterWizard() {
   if (btnOpen) {
     btnOpen.onclick = () => {
       wizardModal.classList.remove("hidden");
+      populateTalentSelect();
+      updateGenderUI(selectedGender);
       rollScores();
       rollRandomTalent();
     };
@@ -1938,6 +2014,11 @@ function initCharacterWizard() {
       selectedWorld = card.dataset.world || "古代宫闱 · 深宫弄权";
       const badge = document.getElementById("selected-theme-badge");
       if (badge) badge.textContent = selectedWorld;
+
+      // 古代宫闱默认推荐女身入局
+      if (selectedWorld.includes("古代宫闱") && selectedGender !== "男") {
+        updateGenderUI("女");
+      }
       audio.playAlert();
     };
   });
@@ -1952,7 +2033,23 @@ function initCharacterWizard() {
       wizardModal.classList.add("hidden");
       audio.playNat20();
 
-      // 1. 确定六维分配（按点数从高到低自动赋给角色）
+      // 1. 确定最终角色性别与基础档案
+      let finalGender = selectedGender;
+      if (finalGender === "随缘") {
+        finalGender = (Math.random() > 0.5) ? "女" : "男";
+      }
+
+      state.character.profile.gender = finalGender;
+      state.wizard.gender = finalGender;
+
+      if (finalGender === "女") {
+        state.character.profile.name = (state.character.profile.name === "行者") ? "清沅" : state.character.profile.name;
+        state.character.profile.looks = "墨发如瀑，眼眸明澈，身形纤巧素雅，虽处逆境亦有不卑不亢之清华气度";
+      } else {
+        state.character.profile.looks = "发髻整肃，神采沉静，面容坚毅从容，身着寻常布衣，自有一番定力";
+      }
+
+      // 2. 确定六维分配（按点数从高到低自动赋给角色）
       const scores = state.wizard.rolledScores || [16, 14, 13, 12, 10, 8];
       state.theme = selectedWorld;
       state.character.talent = currentTalent;
@@ -1965,30 +2062,31 @@ function initCharacterWizard() {
         CHA: scores[5] || 8
       };
 
-      // 2. 刷新顶栏题材
+      // 3. 刷新顶栏题材
       const subTitleElem = document.getElementById("campaign-theme-subtitle");
       if (subTitleElem) subTitleElem.textContent = `${selectedWorld} · 纯文字独立引擎`;
 
-      // 3. 刷新命盘抽屉（展现天命神技卡片）
+      // 4. 刷新命盘抽屉（展现天命神技卡片与性别）
       renderTacticalPanel();
 
-      // 4. 清空流并直接触发破幕开局
+      // 5. 清空流并直接触发破幕开局
       const stream = document.getElementById("narrative-stream");
       if (stream) stream.innerHTML = "";
 
-      const startPrompt = `【天命降临 · 睁眼入局】：
+      // 入局故事与神技彻底解耦：聚焦生动的人物处境与紧迫危机，神技只作为袖中底牌暗藏
+      const startPrompt = `【天命降临 · 纯粹入局】：
 时代世界：【${selectedWorld}】
+角色性别：【${finalGender}】（司命请严格按照【${finalGender}】性别的视角、身份与称谓展开推演！）
 天命六维出目：DEX ${scores[0]}, INT ${scores[1]}, CON ${scores[2]}, STR ${scores[3]}, WIS ${scores[4]}, CHA ${scores[5]}
-觉醒天命神技：【${currentTalent.name}】（${currentTalent.desc} | 专属判定加值：${currentTalent.trigger}）
+暗藏袖中绝密底牌（天命神技）：【${currentTalent.name}】（${currentTalent.desc} | 专属判定加值：${currentTalent.trigger}）
 
-司命请遵照指令：
-1. 立即为我随机分配一个该题材下意想不到的小人物盲盒身份（如冷宫废妃、扫地小宫女、后厨切墩小厮、便利店夜班店员、大厂保洁阿姨、小诊所学徒等）；
-2. 绝对不要给我预设必须去完成的崇高使命，我没有任何预设目的，全由我在后续游玩中随心所欲；
-3. 直接描写我睁开双眼的【第一秒】面临的突发惊险状况；
-4. 必须在剧情中描写我的天命神技【${currentTalent.name}】的神异感应（如听到心声、闻出毒气等）；
-5. 在回复末尾提供 3 个横排智斗谋策胶囊，其中第 1 个胶囊必须是使用天命神技【${currentTalent.name}】的爽快破局选项！`;
+司命请遵循以下开局推演规则：
+1. 【小人物沉浸盲盒】：为我随机分配一个该题材下真实贴切的小人物身份（${finalGender === '女' ? '女号如：冷宫受欺小秀女、被掌事姑姑刁难的浣衣局宫女、便利店夜班女收银员、末日避难所小护士等' : '男号如：带刀小侍卫、后厨小厮、程序员、拾荒学徒等'}）。绝不要给我预设宏大使命，我没有任何既定目的，全由我在后续游玩中随心所欲；
+2. 【故事与神技彻底解耦，纯粹沉浸与危机拉满】：直接描写我睁开双眼的【第一秒】身处的真实环境与眼前的紧迫危机（如被泼冷水惊醒、门外传来脚步声、端着的托盘即将滑落、正被上级厉声训斥等）。【严禁在开局强行交代或宣布我觉醒了神技，绝不要让开局故事被神技绑架】！
+3. 【神技定位为暗藏袖中底牌】：天命神技【${currentTalent.name}】是我暗藏的秘密王牌，在剧情中只有当情境触及或我主动动用时才展现神异；
+4. 【智斗谋策胶囊】：在回复末尾提供 3 个横排谋策胶囊，贴合当前处境（包含机智应对、暗中隐忍周旋、利用身边环境等，可有 1 个出其不意的底牌策略供我挑选）。`;
 
-      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，天命神技【${currentTalent.name}】已苏醒。`);
+      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，肉身【${finalGender}】，暗藏底牌【${currentTalent.name}】。`);
       sendPlayerAction(startPrompt);
     };
   }
