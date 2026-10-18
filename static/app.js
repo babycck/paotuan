@@ -2157,21 +2157,16 @@ function initCharacterWizard() {
       const stream = document.getElementById("narrative-stream");
       if (stream) stream.innerHTML = "";
 
-      // 入局故事与神技彻底解耦：聚焦生动人物处境与紧迫危机，神技只作为袖中底牌暗藏
-      const startPrompt = `【天命降临 · 纯粹入局】：
-时代世界：【${selectedWorld}】
-角色名讳：【${chosenName}】
-角色性别：【${finalGender}】（司命在剧情、对白与周围人物交锋中，必须以此尊名或其身份尊称呼唤我，严禁男女不分，严禁将女性称呼为‘行者/少侠’！）
-天命六维出目：DEX ${scores[0]}, INT ${scores[1]}, CON ${scores[2]}, STR ${scores[3]}, WIS ${scores[4]}, CHA ${scores[5]}
-暗藏袖中绝密底牌（天命神技）：【${currentTalent.name}】（${currentTalent.desc} | 专属判定加值：${currentTalent.trigger}）
+      // 入局故事与神技彻底解耦：纯小说破幕，严禁任何冒号填表格式，逼出高质量长篇正文
+      const startPrompt = `破幕开局。我是【${chosenName}】（${finalGender}性），此刻刚刚在【${selectedWorld}】的突发险境中睁开双眼。
+请司命立即展开至少 500 字的生动第一幕小说正文：
+- 【绝对禁令】：严禁输出任何类似“【天命降临】”、“时代世界：”、“角色性别：”、“身份：”等标题、冒号标签或公文列表！
+- 第一个字必须直接切入电影镜头般的现场小说描写：刺骨真实的声色细节、周围人物恶狠狠的逼问训斥、我第一秒面临的突发惊险危机；
+- 结合我的女性视角与尊名【${chosenName}】自然赋予我贴切的小人物处境；
+- 天命神技【${currentTalent.name}】仅作为我暗藏在袖中的绝密底牌，神技与故事完全解耦，不影响开局原汁原味的世界沉浸感；
+- 在小说回复最末尾附带 3 个横排智斗谋策胶囊，供我决断出招。`;
 
-司命请遵循以下开局推演规则：
-1. 【小人物沉浸盲盒】：为我随机分配一个该题材下真实贴切的小人物身份（${finalGender === '女' ? '女号如：冷宫受欺小秀女、被掌事姑姑刁难的浣衣局宫女、便利店夜班女收银员、末日避难所小护士等' : '男号如：带刀小侍卫、后厨小厮、程序员、拾荒学徒等'}）。绝不要给我预设宏大使命，我没有任何既定目的，全由我在后续游玩中随心所欲；
-2. 【故事与神技彻底解耦，纯粹沉浸与危机拉满】：直接描写我睁开双眼的【第一秒】身处的真实环境与眼前的紧迫危机（如被泼冷水惊醒、门外传来脚步声、端着的托盘即将滑落、正被上级厉声训斥等）。【严禁在开局强行交代或宣布我觉醒了神技，绝不要让开局故事被神技绑架】！
-3. 【神技定位为暗藏袖中底牌】：天命神技【${currentTalent.name}】是我暗藏的秘密王牌，在剧情中只有当情境触及或我主动动用时才展现神异；
-4. 【智斗谋策胶囊】：在回复末尾提供 3 个横排谋策胶囊，贴合当前处境（包含机智应对、暗中隐忍周旋、利用身边环境等，可有 1 个出其不意的底牌策略供我挑选）。`;
-
-      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，尊名【${chosenName}】(${finalGender})，暗藏底牌【${currentTalent.name}】。`);
+      appendNarrativeEntry("user", `【破幕入局】：${chosenName} (${finalGender}) 睁开双眼，降临于【${selectedWorld}】。`);
       sendPlayerAction(startPrompt);
     };
   }
