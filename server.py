@@ -144,6 +144,12 @@ async def get_js_root():
     return FileResponse(os.path.join(STATIC_DIR, "app.js"))
 
 
+@app.get("/talents.js")
+async def get_talents_root():
+    """兼容根路径直连 talents.js 资源"""
+    return FileResponse(os.path.join(STATIC_DIR, "talents.js"))
+
+
 @app.get("/favicon.ico")
 async def favicon_endpoint():
     """消除浏览器默认请求网站图标的 404 报错"""
