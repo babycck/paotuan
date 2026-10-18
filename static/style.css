@@ -2751,7 +2751,7 @@ html, body {
   background: rgba(18, 22, 32, 0.85);
   border: 1px solid rgba(212, 175, 55, 0.4);
   color: #f6d365;
-  padding: 4px 10px;
+  padding: 4px 12px;
   font-size: 0.8rem;
   border-radius: 16px;
   letter-spacing: 0.5px;
@@ -2760,9 +2760,8 @@ html, body {
   align-items: center;
   transition: all 0.3s ease;
   white-space: nowrap;
-  max-width: 145px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: auto;
+  max-width: none;
   flex-shrink: 0;
   cursor: default;
 }
@@ -2780,11 +2779,13 @@ html, body {
     font-size: 12px;
   }
   .time-badge {
-    max-width: 125px;
-    padding: 3px 8px;
-    font-size: 0.76rem;
+    width: auto;
+    max-width: none;
+    padding: 4px 10px;
+    font-size: 0.78rem;
   }
 }
+
 
 
 /* 2. 突破行动智能启发建议胶囊 (1~2个线索点) */
@@ -2920,6 +2921,15 @@ html, body {
   .header-actions button, .header-actions span {
     padding: 8px 12px;
     font-size: 0.86rem;
+  }
+  .header-actions .time-badge {
+    padding: 6px 12px !important;
+    font-size: 0.82rem !important;
+    min-height: 32px !important;
+    width: auto !important;
+    max-width: none !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
   }
   .action-textarea {
     font-size: 16px !important; /* 彻底防止 iPad/iOS 自动缩放视角 */
