@@ -146,8 +146,11 @@ async def get_js_root():
 
 @app.get("/talents.js")
 async def get_talents_root():
-    """兼容根路径直连 talents.js 资源"""
-    return FileResponse(os.path.join(STATIC_DIR, "talents.js"))
+    """兼容根路径直连 talents.js 资源，若文件不存在则安全返回空脚本，彻底杜绝 404 报错"""
+    talents_path = os.path.join(STATIC_DIR, "talents.js")
+    if os.path.isfile(talents_path):
+        return FileResponse(talents_path, media_type="application/javascript")
+    return Response(content="/* 100 talents embedded in app.js */\n", media_type="application/javascript")
 
 
 @app.get("/favicon.ico")
