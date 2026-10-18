@@ -118,6 +118,9 @@ class GenerateProfileRequest(BaseModel):
     race: Optional[str] = "人类"
     cls: Optional[str] = "战士"
     char_class: Optional[str] = None
+    theme: Optional[str] = "开放自由题材"
+    api_key: Optional[str] = None
+
 
 
 
@@ -278,26 +281,110 @@ async def clear_suggestions_endpoint():
     return {"status": "ok", "message": "建议灵感录已清空"}
 
 
+def generate_fallback_random_profile(idea: str, race: str, cls: str, theme: str) -> Dict[str, Any]:
+    """离线或弱网保底：基于多题材随机发生器，保障千人千面绝不重样"""
+    import random
+    surnames = ["顾", "沈", "苏", "陆", "楚", "裴", "温", "谢", "崔", "宁", "秦", "唐", "林", "宋", "江", "萧", "霍", "白", "傅", "叶", "方", "程", "商", "严", "祝", "贺"]
+    male_names = ["知许", "砚秋", "云舟", "清辞", "怀安", "策", "景明", "鹤亭", "凌风", "思远", "修齐", "延之", "北望", "子渊", "若愚", "明川", "承宇", "言昭"]
+    female_names = ["微澜", "清梧", "思危", "南乔", "秋月", "映雪", "昭华", "素问", "知意", "芷兰", "凝霜", "望舒", "惊鸿", "幼薇", "书仪", "晚晴", "云舒", "若初"]
+
+    if any(w in idea for w in ["女", "妹", "娘", "姐", "姬", "妃", "妇", "妇人"]):
+        gender = "女"
+    elif any(w in idea for w in ["男", "汉", "郎", "哥", "爷", "僧", "道士"]):
+        gender = "男"
+    else:
+        gender = random.choice(["男", "女"])
+
+    name = random.choice(surnames) + (random.choice(female_names) if gender == "女" else random.choice(male_names))
+    age = random.randint(19, 33)
+
+    if gender == "男":
+        height = random.randint(173, 186)
+        weight = int(height - 105 + random.randint(-4, 6))
+        builds = [
+            "身姿修长挺拔，举手投足间干练从容",
+            "体魄精悍紧实，下盘稳固，暗藏锋芒",
+            "清瘦俊朗，微带书卷气，目光如炬",
+            "魁梧轩昂，肩宽臂沉，透着刚毅沉稳"
+        ]
+        looks_pool = [
+            "碎发干净利落，眼眸漆黑沉静，神色自若，着一身便于行动的深色防风常服，举止间暗藏戒备与深思。",
+            "剑眉星目，目光坚毅深邃，嘴角微含自嘲却目光如刀，衣着洗得发白却整饬规整，气质超拔沉着。",
+            "戴半框墨色细镜，神情内敛微带倦意，着深灰战术夹克与贴身衣袍，眼神锐利仿佛能勘破人心虚妄。",
+            "长发随意束起，眼神散漫中带着敏锐警觉，身披宽松长衫，看似闲散不羁，动如脱兔惊弦。"
+        ]
+    else:
+        height = random.randint(162, 173)
+        weight = int(height - 110 + random.randint(-3, 4))
+        builds = [
+            "身姿高挑轻捷，步履无声，透着敏巧干练",
+            "清丽出尘，体态端庄典雅，眸若秋水清潭",
+            "英姿飒爽，举止利索果决，巾帼不让须眉",
+            "娇柔清雅中微带凌厉，神情从容自若不怯场"
+        ]
+        looks_pool = [
+            "墨发轻挽成简髻，眼眸清澈明亮，神色淡定从容，着素雅轻便常服，袖间隐现灵动巧思与防备之物。",
+            "容颜清秀，眉宇间有一股不屈的坚毅韧劲，发间仅用一根简素木簪固定，衣着干练爽利，目光灼灼。",
+            "明眸善睐，气质清冷而敏锐，着一袭深蓝素锦外袍，神情淡漠自若，让人不敢有丝毫轻慢。",
+            "秀发齐肩，眼神灵动中带着一丝世事沧桑与机锋，外着合体常服，举手投足间极具主见与决断。"
+        ]
+
+    tokens_pool = [
+        "外壳磨损但机芯精准的暗纹停摆怀表",
+        "内衬刻着家族隐秘标记的无字玄铁断佩",
+        "贴身用皮绳悬挂的小型加密合金存储条",
+        "一柄刃口微卷却异常锋利的祖传精钢折刃",
+        "半枚边缘参差的古老生锈黄铜钱",
+        "用红线缠绕、内藏暗语机锋的半截古旧竹签",
+        "长辈临终前交付的带密码暗锁的黄铜挂坠盒",
+        "磨损严重的无名草药香囊，偶有暗香沁脾",
+        "一枚刻有失落印记的暗青玉扳指",
+        "一张泛黄脆弱、背面写满推演符码的旧账单"
+    ]
+
+    return {
+        "name": name,
+        "gender": gender,
+        "age": age,
+        "height": height,
+        "weight": weight,
+        "build": random.choice(builds),
+        "looks": random.choice(looks_pool),
+        "backstory": f"依据行者灵感【{idea}】推衍因果：身逢变故与世间纷乱，心怀未竟执念与尘封真相，虽经磨难磋磨，却从未动摇内心的破局信条，伺机而动。",
+        "token": random.choice(tokens_pool)
+    }
+
+
 @app.post("/api/character/generate_profile")
 async def generate_character_profile_endpoint(req: GenerateProfileRequest):
     """
     根据玩家随手输入的一两句灵感脑洞，由 DeepSeek 智能分析并提取全套形貌、生平与宿命信物
-    输出严格 JSON 格式
+    输出严格 JSON 格式，具备双保险鉴权与多样化随机保底
     """
     idea = req.idea.strip()
     if not idea:
         raise HTTPException(status_code=400, detail="灵感内容不可为空")
 
     cfg = load_config()
-    api_key = cfg.get("api_key", "").strip()
+    api_key = (req.api_key or "").strip() or cfg.get("api_key", "").strip()
     base_url = cfg.get("base_url", "https://api.deepseek.com").rstrip("/")
     model = cfg.get("model", "deepseek-chat")
+    theme_val = req.theme or "开放自由题材"
+    target_cls = req.char_class or req.cls or "战士"
 
-    system_instruction = """你是一位精通桌面角色扮演游戏（TRPG）与文学小说人物塑造的大师级地下城主（DM）。
-你的任务：根据玩家提供的一两句简短脑洞灵感，为其创造一位极具戏剧张力、有血有肉有动机的跑团角色。
-你必须严格以合法的 JSON 格式返回，严禁任何额外的开场白、问候语或 markdown 代码块标记以外的多余文字。
+    if not api_key:
+        return generate_fallback_random_profile(idea, req.race, target_cls, theme_val)
+
+    system_instruction = f"""你是一位精通桌面角色扮演游戏（TRPG）与文学小说人物塑造的大师级地下城主（DM）。
+当前战役舞台背景题材为：【{theme_val}】。
+你的任务：根据玩家提供的简短脑洞灵感，为其创造一位极具戏剧张力、有血有肉有反差的跑团角色。
+【★拒绝千人一面，必须千人千面★】：
+1. 严禁使用死板套路模板！必须结合灵感脑洞【{idea}】与题材【{theme_val}】，设计极具个性与时代契合度的姓名、体型与神韵；
+2. 外貌肖像必须紧扣其身份处境，生动描摹眼神、神情与特色常服打扮；
+3. 宿命信物必须是深具命运羁绊的关键之宝（现代如加密硬盘、泛黄老旧名片、停摆怀表；古代如折扇、断佩、铜钱；仙侠如古玉、法剑残片），严禁平庸凡物；
+4. 必须严格以合法 JSON 格式输出，禁止任何多余 Markdown 标记之外的废话。
 JSON 字段规范：
-{
+{{
   "name": "极具意境与性格的角色姓名（2~4字）",
   "gender": "男/女",
   "age": 年龄整数（如 24）,
@@ -306,26 +393,10 @@ JSON 字段规范：
   "build": "身姿体态（如：修长干练、挺拔沉稳、娇柔清雅、魁梧硬朗）",
   "looks": "外貌肖像与常服装束（生动描摹发型、眉目眼神、神态表情与常服风格，50~80字）",
   "backstory": "身世经历与当下核心动机（写清出身背景、遭遇挫折或追求，80~120字）",
-  "token": "随身携带的宿命信物（贾宝玉通灵宝玉式的关键转世/宿命羁绊之物，如：一枚带机关的停摆古董怀表、父亲留下的加密U盘）"
-}"""
+  "token": "随身携带的宿命信物（承载关键羁绊或宿命机缘之物）"
+}}"""
 
-    target_cls = req.char_class or req.cls or "战士"
-    user_prompt = f"玩家设定的灵感脑洞：【{idea}】\n角色种族底模：{req.race}，核心职业：{target_cls}。请以此脑洞为核心，推演定夺该行者的全套形相、生平与宿命信物。"
-
-
-
-    if not api_key:
-        return {
-            "name": "沈恪",
-            "gender": "男",
-            "age": 27,
-            "height": 177,
-            "weight": 66,
-            "build": "修长干练，微含书卷气",
-            "looks": "碎发干净微乱，戴半框墨色细镜，眼神锐利内敛，身着深灰防风战术风衣与常服衬衫。",
-            "backstory": f"依据【{idea}】所定之因果：曾隐匿于红尘喧嚣之中，因卷入重大利益与真相纷争而蛰伏暗处，誓要查明暗藏深处的宿怨，讨回公道。",
-            "token": "外壳刻有暗纹的复古停摆机械怀表"
-        }
+    user_prompt = f"玩家设定的灵感脑洞：【{idea}】\n角色种族底模：{req.race}，核心职业：{target_cls}，题材背景：{theme_val}。请以此脑洞为核心，推演定夺该行者的全套形相、生平与宿命信物。"
 
     import httpx
     try:
@@ -342,7 +413,7 @@ JSON 字段规范：
                         {"role": "system", "content": system_instruction},
                         {"role": "user", "content": user_prompt}
                     ],
-                    "temperature": 0.8,
+                    "temperature": 0.9,
                     "max_tokens": 800
                 }
             )
@@ -356,17 +427,8 @@ JSON 字段规范：
     except Exception:
         pass
 
-    return {
-        "name": "陆行知",
-        "gender": "男",
-        "age": 25,
-        "height": 178,
-        "weight": 67,
-        "build": "身姿修长，精悍从容",
-        "looks": "眼眸漆黑沉静，神色自若，着素雅干练常服，举止间暗藏戒备与锋芒。",
-        "backstory": f"根据您的灵感【{idea}】：行走于世间迷局边缘，虽历经变故挫折，心中却始终坚守最初的执念与真相，伺机破局而入。",
-        "token": "贴身暗藏的雕花玄铁信物"
-    }
+    return generate_fallback_random_profile(idea, req.race, target_cls, theme_val)
+
 
 
 @app.post("/api/roll")

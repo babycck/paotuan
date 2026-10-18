@@ -600,8 +600,10 @@ function updateTimeDisplay(timeStr) {
   const badge = document.getElementById("game-time-badge");
   if (badge) {
     badge.textContent = `⏳ ${timeStr}`;
+    badge.title = `当前剧情世界流转时间：${timeStr}`;
   }
 }
+
 
 // 2. 结缘人物谱管理器
 function addOrUpdateNpc(npc) {
@@ -2604,6 +2606,7 @@ function initAiProfileGenerator() {
     if (hint) hint.classList.remove("hidden");
 
     try {
+      const localKey = localStorage.getItem("paotuan_deepseek_key") || "";
       const resp = await fetch("/api/character/generate_profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2611,9 +2614,12 @@ function initAiProfileGenerator() {
           idea: idea,
           race: state.wizard.selectedRace || "人类",
           cls: state.wizard.selectedClass || "战士",
-          char_class: state.wizard.selectedClass || "战士"
+          char_class: state.wizard.selectedClass || "战士",
+          theme: state.theme || "开放自由题材",
+          api_key: localKey
         })
       });
+
 
       if (!resp.ok) {
         throw new Error(`网络响应错误 (${resp.status})`);
@@ -4299,6 +4305,15 @@ function initNewStoryButton() {
     state.hasStartedFirstAct = false;
     state.pendingCheck = null;
 
+    // 彻底清除上一局结缘人物谱、编年史、主线暗络与时间状态，绝不串场
+    state.npc_roster = [];
+    updateNpcCountBadge();
+    renderNpcRosterModal();
+
+    state.chronicles = [];
+    state.campaignArc = null;
+    updateTimeDisplay("晨光熹微 / 07:30");
+
     const stream = document.getElementById("narrative-stream");
     stream.innerHTML = "";
 
@@ -4306,6 +4321,7 @@ function initNewStoryButton() {
     if (subTitleElem) subTitleElem.textContent = "全自由题材叙事引擎";
     const themeDescElem = document.getElementById("current-theme-desc");
     if (themeDescElem) themeDescElem.textContent = "待定夺……";
+
 
     const charName = state.character?.profile?.name || "行者";
     const newStoryIntro = `【万象新启 · 乾坤重开】\n\n旧岁已逝，风云重开。当前命格：【${charName}】。\n\n请问这次你想体验怎样的人生或故事？（无论古代后宫、现代高考、底层打工经商、还是谍战末世，皆可直接打字告知你的题材背景设想，若有长期追求可说“主线是……”，由司命为你定制专属切入点！）\n\n你接下来要干嘛？`;
