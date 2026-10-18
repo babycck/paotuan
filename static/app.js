@@ -680,6 +680,7 @@ function renderNpcRosterModal() {
 function initNpcRosterModal() {
   const modal = document.getElementById("modal-npc-roster");
   const btnOpen = document.getElementById("btn-open-npc-roster");
+  const btnDrawerOpen = document.getElementById("btn-drawer-open-roster");
   const btnClose = document.getElementById("btn-close-npc-roster");
   const btnFooter = document.getElementById("btn-close-npc-footer");
 
@@ -692,6 +693,7 @@ function initNpcRosterModal() {
   const closeModal = () => modal.classList.add("hidden");
 
   if (btnOpen) btnOpen.onclick = openModal;
+  if (btnDrawerOpen) btnDrawerOpen.onclick = openModal;
   if (btnClose) btnClose.onclick = closeModal;
   if (btnFooter) btnFooter.onclick = closeModal;
 }
@@ -1841,6 +1843,42 @@ async function sendPlayerAction(actionText) {
 // 8. 司命问询式降噪车卡向导 (Wizard Controller)
 // =========================================================
 
+// 核心沉浸式人名库 (男女分题材丰富人名库，彻底杜绝女叫男名与单调无味)
+const IMMERSIVE_NAMES = {
+  "女": {
+    "古代宫闱": ["沈宛清", "苏玉漱", "陆微芷", "姜雪瑶", "赵语嫣", "温幼宜", "顾采薇", "叶绾绾", "崔令仪", "谢兰舟", "薛宝仪", "柳如烟", "江挽月", "云姝"],
+    "江湖草莽": ["凌霜", "燕小满", "柳寄奴", "萧竹", "叶红鱼", "南宫玥", "唐雪见", "秦弄玉", "楚雁栖"],
+    "现代都市": ["许知微", "林夏", "程晚", "宋以宁", "安然", "乔楚", "夏木青", "温凉", "简安", "裴轻语"],
+    "末世废土": ["艾莉", "寒露", "零夏", "林鹿", "白鸦", "简星", "苏芒", "黎明之歌", "叶落"],
+    "民国悬疑": ["白曼丽", "周若虚", "阮梦蝶", "孟青青", "沈织云", "徐佩安", "宋曼青"],
+    "诡秘异闻": ["阿弱", "苏离", "阴秀儿", "纸月", "槐生", "沈轻墨", "幽兰"],
+    "通用": ["清沅", "知许", "念慈", "望舒", "沐雪", "若华", "静姝", "语嫣", "采薇"]
+  },
+  "男": {
+    "古代宫闱": ["沈策", "裴敬", "陆巡", "卫衡", "楚修", "萧景琰", "萧无咎", "霍云深", "谢渊", "顾长风"],
+    "江湖草莽": ["江舟", "叶孤风", "厉沧海", "莫寻欢", "谢凌云", "冷青锋", "陆平川", "司马随风"],
+    "现代都市": ["陆川", "陈默", "周衍", "顾淮", "宋闻璟", "程述", "纪廷", "林修齐"],
+    "末世废土": ["铁砧", "灰隼", "雷诺", "柯林", "老九", "荒石", "破晓"],
+    "民国悬疑": ["沈云鹤", "方克明", "陆少廷", "顾廷均", "程砚秋", "谢景行"],
+    "诡秘异闻": ["陈瞎子", "陆玄机", "封不平", "阴九烛", "墨砚", "守夜人"],
+    "通用": ["行者", "临渊", "承风", "守拙", "子昂", "秉德", "子瞻"]
+  }
+};
+
+function getRandomImmersiveName(gender, world) {
+  const g = (gender === "女") ? "女" : "男";
+  const pool = IMMERSIVE_NAMES[g];
+  let matchedKey = "通用";
+  for (const k in pool) {
+    if (world && world.includes(k)) {
+      matchedKey = k;
+      break;
+    }
+  }
+  const list = (pool[matchedKey] && pool[matchedKey].length > 0) ? pool[matchedKey] : pool["通用"];
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function initCharacterWizard() {
   const wizardModal = document.getElementById("modal-wizard");
   const btnOpen = document.getElementById("btn-open-wizard");
@@ -1850,17 +1888,19 @@ function initCharacterWizard() {
   const btnRerollTalent = document.getElementById("btn-reroll-talent");
   const selectTalent = document.getElementById("select-destiny-talent");
   const genderBtns = document.querySelectorAll("#gender-pill-group .gender-pill-btn");
+  const nameInput = document.getElementById("wizard-char-name");
+  const btnRollName = document.getElementById("btn-roll-name");
 
   if (!wizardModal) return;
 
   // 默认选中的大千世界、性别与当前抽中的天命神技
   let selectedWorld = "古代宫闱 · 深宫弄权";
-  let selectedGender = "女"; // 默认女，契合宫闱与细腻代入
+  let selectedGender = "女"; // 默认女号，契合宫闱大观
   let currentTalent = (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0)
     ? window.DESTINY_TALENTS[34] // 默认第35个：百毒不侵
     : { id: 35, name: "百毒不侵", category: "肉身神异", icon: "🧪", desc: "吞服砒霜、断肠草等世间剧毒皆如甘露，不仅无恙，更能从指甲逼出毒液反噬他人。", trigger: "强韧/嚼毒反噬" };
 
-  // 1. 性别切换管理
+  // 1. 性别切换管理与人名自适应
   function updateGenderUI(gender) {
     selectedGender = gender;
     if (genderBtns && genderBtns.length > 0) {
@@ -1879,6 +1919,12 @@ function initCharacterWizard() {
         }
       });
     }
+
+    // 切换性别时，若当前名字与新性别明显冲突或为默认值，自动重摇一个契合新性别的美名
+    if (nameInput) {
+      const g = (gender === "随缘") ? (Math.random() > 0.5 ? "女" : "男") : gender;
+      nameInput.value = getRandomImmersiveName(g, selectedWorld);
+    }
   }
 
   if (genderBtns && genderBtns.length > 0) {
@@ -1890,7 +1936,19 @@ function initCharacterWizard() {
     });
   }
 
-  // 2. 装填 100 种天命神技自选下拉列表
+  // 2. 随心赐名按钮
+  if (btnRollName && nameInput) {
+    btnRollName.onclick = () => {
+      audio.playDiceRoll();
+      const g = (selectedGender === "随缘") ? (Math.random() > 0.5 ? "女" : "男") : selectedGender;
+      nameInput.value = getRandomImmersiveName(g, selectedWorld);
+      nameInput.style.transform = "scale(1.05)";
+      nameInput.style.borderColor = "#f6d365";
+      setTimeout(() => { if (nameInput) nameInput.style.transform = "scale(1)"; }, 180);
+    };
+  }
+
+  // 3. 装填 100 种天命神技自选下拉列表（首项提供“随缘盲盒”）
   function populateTalentSelect() {
     if (!selectTalent || !window.DESTINY_TALENTS || window.DESTINY_TALENTS.length === 0) return;
     if (selectTalent.children.length > 0) return; // 已装填则不重复装填
@@ -1902,7 +1960,7 @@ function initCharacterWizard() {
       groups[cat].push(t);
     });
 
-    let html = "";
+    let html = `<option value="random">🎲 随缘盲盒 · 天道随机摇号</option>`;
     for (const cat in groups) {
       html += `<optgroup label="── 【${cat}】 ──">`;
       groups[cat].forEach(t => {
@@ -1912,6 +1970,9 @@ function initCharacterWizard() {
     }
     selectTalent.innerHTML = html;
   }
+
+  // 立即预热装填一次
+  populateTalentSelect();
 
   // 更新神技展示卡片并同步下拉选单
   function updateTalentCard(talent) {
@@ -1941,9 +2002,13 @@ function initCharacterWizard() {
     }
   }
 
-  // 下拉选框变更联动
+  // 下拉选框变更联动（支持选随机盲盒，也支持具体指定）
   if (selectTalent) {
     selectTalent.onchange = () => {
+      if (selectTalent.value === "random") {
+        rollRandomTalent();
+        return;
+      }
       const tid = parseInt(selectTalent.value, 10);
       const found = window.DESTINY_TALENTS && window.DESTINY_TALENTS.find(t => t.id === tid);
       if (found) {
@@ -1953,14 +2018,23 @@ function initCharacterWizard() {
     };
   }
 
-  // 随机抽取天命神技
+  // 随机抽取天命神技（严格去重循环，确保每次点击必定变幻一个全新神技）
   function rollRandomTalent() {
     audio.playDiceRoll();
     if (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0) {
-      const idx = Math.floor(Math.random() * window.DESTINY_TALENTS.length);
-      const picked = window.DESTINY_TALENTS[idx];
-      updateTalentCard(picked);
-      if (selectTalent) selectTalent.value = picked.id;
+      let nextTalent = currentTalent;
+      if (window.DESTINY_TALENTS.length > 1) {
+        let attempts = 0;
+        while ((!nextTalent || nextTalent.id === currentTalent?.id) && attempts < 20) {
+          const idx = Math.floor(Math.random() * window.DESTINY_TALENTS.length);
+          nextTalent = window.DESTINY_TALENTS[idx];
+          attempts++;
+        }
+      } else {
+        nextTalent = window.DESTINY_TALENTS[0];
+      }
+      updateTalentCard(nextTalent);
+      if (selectTalent) selectTalent.value = nextTalent.id;
     }
   }
 
@@ -2018,6 +2092,10 @@ function initCharacterWizard() {
       // 古代宫闱默认推荐女身入局
       if (selectedWorld.includes("古代宫闱") && selectedGender !== "男") {
         updateGenderUI("女");
+      } else if (nameInput) {
+        // 题材切换时，推荐一个贴合该题材的美名
+        const g = (selectedGender === "随缘") ? (Math.random() > 0.5 ? "女" : "男") : selectedGender;
+        nameInput.value = getRandomImmersiveName(g, selectedWorld);
       }
       audio.playAlert();
     };
@@ -2033,20 +2111,26 @@ function initCharacterWizard() {
       wizardModal.classList.add("hidden");
       audio.playNat20();
 
-      // 1. 确定最终角色性别与基础档案
+      // 1. 确定最终角色性别、真实尊讳与外貌底模
       let finalGender = selectedGender;
       if (finalGender === "随缘") {
         finalGender = (Math.random() > 0.5) ? "女" : "男";
       }
 
+      // 获取命讳（若为空则自动补填一个好听名字）
+      let chosenName = (nameInput && nameInput.value.trim())
+        ? nameInput.value.trim()
+        : getRandomImmersiveName(finalGender, selectedWorld);
+
+      state.character.profile.name = chosenName;
       state.character.profile.gender = finalGender;
+      state.wizard.name = chosenName;
       state.wizard.gender = finalGender;
 
       if (finalGender === "女") {
-        state.character.profile.name = (state.character.profile.name === "行者") ? "清沅" : state.character.profile.name;
-        state.character.profile.looks = "墨发如瀑，眼眸明澈，身形纤巧素雅，虽处逆境亦有不卑不亢之清华气度";
+        state.character.profile.looks = "墨发如瀑，眼眸明澈清亮，身形纤巧素雅，虽处泥淖亦难掩周身清华风骨";
       } else {
-        state.character.profile.looks = "发髻整肃，神采沉静，面容坚毅从容，身着寻常布衣，自有一番定力";
+        state.character.profile.looks = "发髻整肃，神采沉静从容，面容坚毅端方，身着寻常布衣亦自有一番沉静定力";
       }
 
       // 2. 确定六维分配（按点数从高到低自动赋给角色）
@@ -2066,17 +2150,18 @@ function initCharacterWizard() {
       const subTitleElem = document.getElementById("campaign-theme-subtitle");
       if (subTitleElem) subTitleElem.textContent = `${selectedWorld} · 纯文字独立引擎`;
 
-      // 4. 刷新命盘抽屉（展现天命神技卡片与性别）
+      // 4. 刷新命盘抽屉（展现天命神技卡片、真实姓名与性别）
       renderTacticalPanel();
 
       // 5. 清空流并直接触发破幕开局
       const stream = document.getElementById("narrative-stream");
       if (stream) stream.innerHTML = "";
 
-      // 入局故事与神技彻底解耦：聚焦生动的人物处境与紧迫危机，神技只作为袖中底牌暗藏
+      // 入局故事与神技彻底解耦：聚焦生动人物处境与紧迫危机，神技只作为袖中底牌暗藏
       const startPrompt = `【天命降临 · 纯粹入局】：
 时代世界：【${selectedWorld}】
-角色性别：【${finalGender}】（司命请严格按照【${finalGender}】性别的视角、身份与称谓展开推演！）
+角色名讳：【${chosenName}】
+角色性别：【${finalGender}】（司命在剧情、对白与周围人物交锋中，必须以此尊名或其身份尊称呼唤我，严禁男女不分，严禁将女性称呼为‘行者/少侠’！）
 天命六维出目：DEX ${scores[0]}, INT ${scores[1]}, CON ${scores[2]}, STR ${scores[3]}, WIS ${scores[4]}, CHA ${scores[5]}
 暗藏袖中绝密底牌（天命神技）：【${currentTalent.name}】（${currentTalent.desc} | 专属判定加值：${currentTalent.trigger}）
 
@@ -2086,7 +2171,7 @@ function initCharacterWizard() {
 3. 【神技定位为暗藏袖中底牌】：天命神技【${currentTalent.name}】是我暗藏的秘密王牌，在剧情中只有当情境触及或我主动动用时才展现神异；
 4. 【智斗谋策胶囊】：在回复末尾提供 3 个横排谋策胶囊，贴合当前处境（包含机智应对、暗中隐忍周旋、利用身边环境等，可有 1 个出其不意的底牌策略供我挑选）。`;
 
-      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，肉身【${finalGender}】，暗藏底牌【${currentTalent.name}】。`);
+      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，尊名【${chosenName}】(${finalGender})，暗藏底牌【${currentTalent.name}】。`);
       sendPlayerAction(startPrompt);
     };
   }
@@ -4692,8 +4777,8 @@ function renderManualRollGrid() {
 function initRestAndLevelUp() {
   const btnRest = document.getElementById("btn-inn-rest");
   const modalLevelUp = document.getElementById("modal-level-up");
-  const btnRoll = document.getElementById("btn-levelup-roll");
-  const btnAvg = document.getElementById("btn-levelup-avg");
+  const btnRoll = document.getElementById("btn-lvl-roll-hp") || document.getElementById("btn-levelup-roll");
+  const btnAvg = document.getElementById("btn-lvl-avg-hp") || document.getElementById("btn-levelup-avg");
   const btnClose = document.getElementById("btn-close-levelup");
 
   if (btnRest) {
@@ -5158,6 +5243,8 @@ function initApp() {
   // 移动端兼容
   const btnToggleLeft = document.getElementById("btn-toggle-left");
   if (btnToggleLeft) btnToggleLeft.onclick = () => openDrawer("profile");
+  const btnToggleRight = document.getElementById("btn-toggle-right");
+  if (btnToggleRight) btnToggleRight.onclick = () => openDrawer("chronicles");
 
   // 4. 行动声明发送逻辑 (Enter 发送, Shift+Enter 换行) 与 建议即时收录
   const inputAction = document.getElementById("input-action");

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>《蘑菇灯沉浸跑团》PF1e 纯文字独立跑团系统</title>
-  <link rel="stylesheet" href="style.css?v=20261019_01">
-  <script src="talents.js?v=20261018"></script>
+  <link rel="stylesheet" href="style.css?v=20261019_03">
+  <script src="talents.js?v=20261019_03"></script>
 </head>
 <body class="ink-theme">
   <!-- 顶栏导航 -->
@@ -613,7 +613,7 @@
 
       <div class="wizard-body scrollable" style="flex:1; padding:16px 20px;">
         <!-- 0. 性别定魄 (自由选择，后宫默认女) -->
-        <div class="reincarnate-section" style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between;">
+        <div class="reincarnate-section" style="margin-bottom: 12px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between;">
           <div style="font-weight: bold; color: #f6d365; font-size: 0.88rem;">
             <span>⚧️ 投胎肉身性别：</span>
           </div>
@@ -629,6 +629,20 @@
             </button>
           </div>
         </div>
+
+        <!-- 0.5 角色命讳 (支持自由输入与随机一键赐名，彻底杜绝女叫男名) -->
+        <div class="reincarnate-section" style="margin-bottom: 14px; background: rgba(0,0,0,0.25); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(212,175,55,0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <div style="font-weight: bold; color: #f6d365; font-size: 0.88rem; white-space: nowrap;">
+            <span>🏷️ 降世尊讳大名：</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex: 1; justify-content: flex-end;">
+            <input type="text" id="wizard-char-name" class="form-input" value="沈宛清" placeholder="输入你想叫的名字..." style="max-width: 170px; padding: 4px 10px; font-size: 0.86rem; background: #0d1017; border: 1px solid rgba(212,175,55,0.4); color: #f6d365; border-radius: 6px; text-align: center; font-weight: bold;">
+            <button type="button" class="btn btn-silver btn-small" id="btn-roll-name" title="随机摇一个符合当前性别与题材的优雅名字" style="padding: 4px 10px; font-size: 0.8rem; white-space: nowrap;">
+              🎲 随心赐名
+            </button>
+          </div>
+        </div>
+
 
         <!-- 1. 挑选大千世界宏观大类 (8 选 1) -->
         <div class="reincarnate-section" style="margin-bottom: 18px;">
@@ -987,8 +1001,10 @@
 
   <!-- 模态框 7：功参造化 · 晋升2级升级弹窗 -->
   <div class="modal-overlay hidden" id="modal-level-up">
-    <div class="modal-window level-up-window" style="max-width: 520px; width: 90vw; background: #1a1e29; border: 2px solid var(--gold-border); box-shadow: 0 10px 45px rgba(212,175,55,0.3); border-radius: 8px; text-align: center; padding: 22px 18px;">
+    <div class="modal-window level-up-window" style="max-width: 520px; width: 90vw; background: #1a1e29; border: 2px solid var(--gold-border); box-shadow: 0 10px 45px rgba(212,175,55,0.3); border-radius: 8px; text-align: center; padding: 22px 18px; position: relative;">
+      <button class="btn-close-modal" id="btn-close-levelup" title="关闭升级面板" style="position: absolute; right: 12px; top: 12px; background: transparent; border: none; color: #a0aec0; font-size: 1.2rem; cursor: pointer;">✕</button>
       <div style="font-size: 2.2rem; margin-bottom: 4px;">🌟</div>
+
       <h3 style="color: #f6d365; font-size: 1.25rem; margin: 0 0 8px 0;">【功参造化 · 晋升 2 级】</h3>
       <p style="font-size: 0.85rem; color: #cbd5e0; margin-bottom: 16px;">
         历经千锤百炼，道行终于圆满！气血上限即将突破，请定夺您的气血晋升之道：
@@ -1159,6 +1175,6 @@
   <canvas id="fx-canvas" class="fx-canvas-overlay"></canvas>
 
   <!-- 前端逻辑入口 -->
-  <script src="app.js?v=20261017_31"></script>
+  <script src="app.js?v=20261019_03"></script>
 </body>
 </html>
