@@ -485,11 +485,15 @@ def build_system_prompt(
     """构建严格遵循《Pathfinder v2.01简体》规则、全宇宙全题材万象通用叙事与人生编年史的司命 (DM) 系统提示词"""
     char_desc = "暂未建立人物卡"
     token_desc = "宿命通灵信物（前世伴生之物）"
+    talent_desc = "【百毒不侵】（吞服世间剧毒如饮甘露，更能逼出毒液反噬他人 | 判定加值：强韧/嚼毒反噬+8）"
     if character_info:
         char_desc = json.dumps(character_info, ensure_ascii=False, indent=2)
         prof = character_info.get("profile", {})
         if prof.get("token"):
             token_desc = prof.get("token")
+        if character_info.get("talent"):
+            t = character_info["talent"]
+            talent_desc = f"【{t.get('name', '天命神技')}】（{t.get('desc', '')} | 专属判定加值：{t.get('trigger', '')}）"
 
     theme_context = theme if theme and theme.strip() else "尚未定夺（由玩家在首轮以任意故事题材告知）"
     current_time_str = time_of_day if time_of_day and time_of_day.strip() else "晨光熹微 / 07:30"
@@ -534,6 +538,11 @@ __CHAR_DESC__
 当前玩家随身信物为：【__TOKEN_DESC__】。
 此物乃玩家前世带来、或是贯穿其人生命运的宿命通灵之宝（宛如贾宝玉降生口中所衔之通灵宝玉）。
 无论在古代朝堂、江湖武侠、现代都市职场商战、高三校园、悬疑谍战、科幻赛博或末世废土中，此物皆承载隐秘身世因果、关键机缘感应或重大剧情转折契机！
+
+【★ 觉醒天命神技 · 先天超限金手指（降维打击最高特权）★】：
+当前玩家先天觉醒的天命神技为：【__TALENT_DESC__】。
+1. 司命在【每一个推演回合】中，必须在情境细节中生动描写该神技的神奇体验（例如若为“心声窃听”，必须描写直接听到某位关键 NPC 此刻内心最阴暗真实的一句原声；若为“百毒不侵”，必须描写毒药入喉化为甘露；若为“绝对潜匿”，必须描写巡查侍卫从身侧走过视若无睹）；
+2. 在每回合末尾输出的 3 个横排智斗谋策胶囊中，【第 1 个胶囊必须是使用天命神技的专属爽快特权破局选项】，让玩家充分享受降维打击与捉弄对手的快感！
 
 【★ 全题材自适应与装备/法术降维映射最高铁律（必遵铁律）★】：
 1. 【种族骨相与题材解耦】：
@@ -607,7 +616,7 @@ __ARC_BLOCK__
 5. 【天命继业 · 生死由命、落子无悔】：
    行者若失势落败或力竭陨落，世界主线与历史编年史完好存续，后人以新行者之躯承接先人遗物与未竟之志再入大局！
 """
-    return prompt.replace("__THEME_CONTEXT__", theme_context).replace("__CURRENT_TIME__", current_time_str).replace("__CHAR_DESC__", char_desc).replace("__TOKEN_DESC__", token_desc).replace("__CHRONICLES_BLOCK__", chronicles_block).replace("__ARC_BLOCK__", arc_block).replace("__NPC_BLOCK__", npc_block)
+    return prompt.replace("__THEME_CONTEXT__", theme_context).replace("__CURRENT_TIME__", current_time_str).replace("__CHAR_DESC__", char_desc).replace("__TOKEN_DESC__", token_desc).replace("__TALENT_DESC__", talent_desc).replace("__CHRONICLES_BLOCK__", chronicles_block).replace("__ARC_BLOCK__", arc_block).replace("__NPC_BLOCK__", npc_block)
 
 
 @app.post("/api/chat")

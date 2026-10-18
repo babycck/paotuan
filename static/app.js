@@ -942,6 +942,20 @@ function renderTacticalPanel() {
   const c = state.character;
   if (!c) return;
 
+  // 天命神技 · 金手指卡片动态呈现
+  if (c.talent) {
+    const talentCard = document.getElementById("card-destiny-talent");
+    const iconElem = document.getElementById("destiny-talent-icon");
+    const nameElem = document.getElementById("destiny-talent-name");
+    const descElem = document.getElementById("destiny-talent-desc");
+    const triggerElem = document.getElementById("destiny-talent-trigger");
+    if (talentCard) talentCard.classList.remove("hidden");
+    if (iconElem) iconElem.textContent = c.talent.icon || "✨";
+    if (nameElem) nameElem.textContent = `天命神技 · ${c.talent.name}`;
+    if (descElem) descElem.textContent = c.talent.desc || "";
+    if (triggerElem) triggerElem.textContent = `🎯 专属判定：${c.talent.trigger || '神技碾压'} (+8 优选)`;
+  }
+
   // 身份与气血
   document.getElementById("char-name").textContent = c.profile.name || "行者";
   document.getElementById("char-alignment").textContent = c.profile.alignment || "守序中立";
@@ -1831,124 +1845,153 @@ function initCharacterWizard() {
   const wizardModal = document.getElementById("modal-wizard");
   const btnOpen = document.getElementById("btn-open-wizard");
   const btnClose = document.getElementById("btn-close-wizard");
-  const btnNext = document.getElementById("btn-wizard-next");
-  const btnPrev = document.getElementById("btn-wizard-prev");
   const btnFinish = document.getElementById("btn-wizard-finish");
+  const btnRollScores = document.getElementById("btn-roll-4d6k3");
+  const btnRerollTalent = document.getElementById("btn-reroll-talent");
 
-  btnOpen.onclick = () => {
-    wizardModal.classList.remove("hidden");
-    showWizardStep(1);
-  };
-  btnClose.onclick = () => wizardModal.classList.add("hidden");
+  if (!wizardModal) return;
 
-  // Step 1: 4d6k3 摇骰 (摇出 6 组纯净点数池，不预设任何属性)
-  document.getElementById("btn-roll-4d6k3").onclick = () => {
+  // 默认选中的大千世界与当前抽中的天命神技
+  let selectedWorld = "古代宫闱 · 深宫弄权";
+  let currentTalent = (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0)
+    ? window.DESTINY_TALENTS[34] // 默认第35个：百毒不侵
+    : { id: 35, name: "百毒不侵", category: "肉身神异", icon: "🧪", desc: "吞服砒霜、断肠草等世间剧毒皆如甘露，不仅无恙，更能从指甲逼出毒液反噬他人。", trigger: "强韧/嚼毒反噬" };
+
+  // 更新神技展示卡片
+  function updateTalentCard(talent) {
+    if (!talent) return;
+    currentTalent = talent;
+    const iconEl = document.getElementById("wizard-talent-icon");
+    const nameEl = document.getElementById("wizard-talent-name");
+    const catEl = document.getElementById("wizard-talent-cat");
+    const descEl = document.getElementById("wizard-talent-desc");
+    const trigEl = document.getElementById("wizard-talent-trigger");
+    const cardEl = document.getElementById("talent-card-display");
+
+    if (iconEl) iconEl.textContent = talent.icon || "✨";
+    if (nameEl) nameEl.textContent = `天命神技 · ${talent.name}`;
+    if (catEl) catEl.textContent = `${talent.category}流派 · 编号 #${talent.id}`;
+    if (descEl) descEl.textContent = talent.desc || "";
+    if (trigEl) trigEl.textContent = `🎯 专属判定：${talent.trigger || '神技碾压'} (+8 碾压)`;
+
+    if (cardEl) {
+      cardEl.style.transform = "scale(1.03)";
+      cardEl.style.borderColor = "#f6d365";
+      setTimeout(() => { if (cardEl) cardEl.style.transform = "scale(1)"; }, 200);
+    }
+  }
+
+  // 随机抽取天命神技
+  function rollRandomTalent() {
+    audio.playDiceRoll();
+    if (window.DESTINY_TALENTS && window.DESTINY_TALENTS.length > 0) {
+      const idx = Math.floor(Math.random() * window.DESTINY_TALENTS.length);
+      updateTalentCard(window.DESTINY_TALENTS[idx]);
+    }
+  }
+
+  // 摇取 6 组纯净点数
+  function rollScores() {
     audio.playDiceRoll();
     const scores = [];
     for (let i = 0; i < 6; i++) {
       const rolls = [1, 2, 3, 4].map(() => Math.floor(Math.random() * 6) + 1);
       rolls.sort((a, b) => b - a);
-      const sum = rolls[0] + rolls[1] + rolls[2];
-      scores.push(sum);
+      scores.push(rolls[0] + rolls[1] + rolls[2]);
     }
-    // 降序排列天道出目
-    state.wizard.rolledScores = scores.sort((a, b) => b - a);
+    scores.sort((a, b) => b - a);
+    state.wizard.rolledScores = scores;
 
-    // 1. 呈现纯净天道出目池筹码 (100% 纯点数，不带属性偏见)
-    const poolBox = document.getElementById("dice-pool-container");
     const chipsBox = document.getElementById("dice-pool-chips");
-    if (poolBox && chipsBox) {
-      poolBox.classList.remove("hidden");
-      chipsBox.innerHTML = state.wizard.rolledScores.map(score => `
-        <div class="dice-chip">
-          <span class="chip-dice-icon">🎲</span>
-          <span class="chip-num">${score}</span>
-        </div>
+    if (chipsBox) {
+      chipsBox.innerHTML = scores.map(score => `
+        <span class="dice-chip" style="background:#2d3748; padding:4px 12px; border-radius:6px; font-weight:bold; color:#f6d365; border:1px solid rgba(212,175,55,0.4);">
+          ${score}
+        </span>
       `).join("");
     }
+  }
 
-    // 2. 依据当前世界观题材初选志向流派
-    let defaultPreset = "warrior";
-    const theme = (state.theme || "").toLowerCase();
-    if (/考|清华|学|题|谋|文|书|策|智/.test(theme)) {
-      defaultPreset = "scholar";
-    } else if (/妃|宠|宫|商|老板|谈|社交|美|情|爱/.test(theme)) {
-      defaultPreset = "noble";
-    } else if (/厨|餐馆|菜|饭|潜|影|贼|偷|刺客/.test(theme)) {
-      defaultPreset = "artisan";
-    } else if (/战|杀|武|砍|霸|士|军/.test(theme)) {
-      defaultPreset = "warrior";
-    } else {
-      defaultPreset = "balanced";
-    }
+  if (btnOpen) {
+    btnOpen.onclick = () => {
+      wizardModal.classList.remove("hidden");
+      rollScores();
+      rollRandomTalent();
+    };
+  }
+  if (btnClose) btnClose.onclick = () => wizardModal.classList.add("hidden");
 
-    // 3. 初始化六维槽位与志向面板，将纯点数池依据志向流向六维，并联动门派
-    renderAbilityAssignmentGrid();
-    initArchetypePresets();
-    applyArchetypePreset(defaultPreset);
-  };
+  // 绑定 8 个大千世界卡片点击
+  document.querySelectorAll(".world-card").forEach(card => {
+    card.onclick = () => {
+      document.querySelectorAll(".world-card").forEach(c => {
+        c.classList.remove("active");
+        c.style.borderColor = "rgba(255,255,255,0.1)";
+        const titleEl = c.querySelector("div:nth-child(2)");
+        if (titleEl) titleEl.style.color = "#cbd5e0";
+      });
+      card.classList.add("active");
+      card.style.borderColor = "#f6d365";
+      const titleEl = card.querySelector("div:nth-child(2)");
+      if (titleEl) titleEl.style.color = "#f6d365";
 
-  // 切换步骤
-  btnNext.onclick = () => {
-    if (state.wizard.currentStep < 5) {
-      showWizardStep(state.wizard.currentStep + 1);
-    }
-  };
-  btnPrev.onclick = () => {
-    if (state.wizard.currentStep > 1) {
-      showWizardStep(state.wizard.currentStep - 1);
-    }
-  };
-
-  // 完成车卡
-  btnFinish.onclick = () => {
-    finalizeCharacterCreation();
-    wizardModal.classList.add("hidden");
-  };
-
-  // 天赋职业奖励 (FCB) 实时监听
-  document.querySelectorAll('input[name="wizard-fcb"]').forEach(radio => {
-    radio.onchange = () => {
-      state.wizard.fcbChoice = radio.value;
-      if (state.wizard.currentStep === 4) {
-        renderSkillAllocator();
-      }
+      selectedWorld = card.dataset.world || "古代宫闱 · 深宫弄权";
+      const badge = document.getElementById("selected-theme-badge");
+      if (badge) badge.textContent = selectedWorld;
+      audio.playAlert();
     };
   });
 
-  // 技能一键智能分配与重置
-  const btnQuickAlloc = document.getElementById("btn-quick-alloc-skills");
-  if (btnQuickAlloc) btnQuickAlloc.onclick = quickAllocSkills;
-  const btnResetAlloc = document.getElementById("btn-reset-alloc-skills");
-  if (btnResetAlloc) btnResetAlloc.onclick = resetAllocSkills;
+  // 绑定摇骰与重抽神技
+  if (btnRollScores) btnRollScores.onclick = rollScores;
+  if (btnRerollTalent) btnRerollTalent.onclick = rollRandomTalent;
 
-  // 初始化向导初始渲染
-  renderRaceCards();
-  renderClassCards();
-  renderSubclassSelector();
-  renderAbilityAssignmentGrid();
+  // 绑定【🌌 睁眼入世 · 踏入大千】
+  if (btnFinish) {
+    btnFinish.onclick = () => {
+      wizardModal.classList.add("hidden");
+      audio.playNat20();
 
-  // 第5步：问形相与生平 输入项实时同步监听
-  const step5InputIds = [
-    "input-char-name", "input-char-gender", "input-char-age",
-    "input-char-height", "input-char-weight", "input-char-build",
-    "input-char-looks", "input-char-backstory", "input-char-token",
-    "wizard-trait-select"
-  ];
-  step5InputIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.addEventListener("input", () => {
-        if (state.wizard.currentStep === 5) renderWizardFinalPreview();
-      });
-      el.addEventListener("change", () => {
-        if (state.wizard.currentStep === 5) renderWizardFinalPreview();
-      });
-    }
-  });
+      // 1. 确定六维分配（按点数从高到低自动赋给角色）
+      const scores = state.wizard.rolledScores || [16, 14, 13, 12, 10, 8];
+      state.theme = selectedWorld;
+      state.character.talent = currentTalent;
+      state.character.abilities = {
+        STR: scores[3] || 12,
+        DEX: scores[0] || 16,
+        CON: scores[2] || 13,
+        INT: scores[1] || 14,
+        WIS: scores[4] || 10,
+        CHA: scores[5] || 8
+      };
 
-  // 初始化第5步 AI 智能分析提炼人设
-  initAiProfileGenerator();
+      // 2. 刷新顶栏题材
+      const subTitleElem = document.getElementById("campaign-theme-subtitle");
+      if (subTitleElem) subTitleElem.textContent = `${selectedWorld} · 纯文字独立引擎`;
+
+      // 3. 刷新命盘抽屉（展现天命神技卡片）
+      renderTacticalPanel();
+
+      // 4. 清空流并直接触发破幕开局
+      const stream = document.getElementById("narrative-stream");
+      if (stream) stream.innerHTML = "";
+
+      const startPrompt = `【天命降临 · 睁眼入局】：
+时代世界：【${selectedWorld}】
+天命六维出目：DEX ${scores[0]}, INT ${scores[1]}, CON ${scores[2]}, STR ${scores[3]}, WIS ${scores[4]}, CHA ${scores[5]}
+觉醒天命神技：【${currentTalent.name}】（${currentTalent.desc} | 专属判定加值：${currentTalent.trigger}）
+
+司命请遵照指令：
+1. 立即为我随机分配一个该题材下意想不到的小人物盲盒身份（如冷宫废妃、扫地小宫女、后厨切墩小厮、便利店夜班店员、大厂保洁阿姨、小诊所学徒等）；
+2. 绝对不要给我预设必须去完成的崇高使命，我没有任何预设目的，全由我在后续游玩中随心所欲；
+3. 直接描写我睁开双眼的【第一秒】面临的突发惊险状况；
+4. 必须在剧情中描写我的天命神技【${currentTalent.name}】的神异感应（如听到心声、闻出毒气等）；
+5. 在回复末尾提供 3 个横排智斗谋策胶囊，其中第 1 个胶囊必须是使用天命神技【${currentTalent.name}】的爽快破局选项！`;
+
+      appendNarrativeEntry("user", `【睁眼入世】：降临在【${selectedWorld}】，天命神技【${currentTalent.name}】已苏醒。`);
+      sendPlayerAction(startPrompt);
+    };
+  }
 }
 
 
