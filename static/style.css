@@ -333,7 +333,7 @@ html, body {
   display: none !important;
 }
 
-/* 叙事正文居中呼吸感排版 (780px 黄金阅读流) */
+/* 叙事正文排版 (适配 iPad 横屏黄金阅读流，拓宽至 1050px~1100px) */
 .narrative-stream {
   flex: 1;
   overflow-y: auto;
@@ -341,16 +341,18 @@ html, body {
 }
 
 .narrative-stream .narrative-entry {
-  max-width: 780px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.narrative-input-box {
-  max-width: 820px;
+  max-width: 1050px;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
+}
+
+.narrative-input-box {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 
@@ -2921,11 +2923,20 @@ html, body {
   }
   .action-textarea {
     font-size: 16px !important; /* 彻底防止 iPad/iOS 自动缩放视角 */
-    padding: 10px 12px;
-    min-height: 60px;
+    padding: 12px 16px;
+    min-height: 64px;
+    border-radius: 8px;
+  }
+  .narrative-stream .narrative-entry {
+    max-width: min(1100px, 94vw);
+  }
+  .narrative-input-box {
+    max-width: min(1140px, 96vw);
+    padding: 12px 16px;
   }
   .btn-send {
-    min-width: 90px;
+    min-width: 95px;
+    padding: 0 16px;
   }
   /* 平板滚动平滑度 */
   .scrollable {
