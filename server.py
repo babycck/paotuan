@@ -156,6 +156,14 @@ async def favicon_endpoint():
     return Response(status_code=204)
 
 
+@app.get("/apple-touch-icon.png")
+@app.get("/apple-touch-icon-precomposed.png")
+async def apple_touch_icon_endpoint():
+    """消除 iOS / Safari 自动探测主屏图标的 404 报错"""
+    return Response(status_code=204)
+
+
+
 @app.get("/api/rules/crb_catalog")
 async def get_crb_catalog_endpoint():
     """直接调取项目内内置的纯正 CRB 核心规则全书条目"""
@@ -227,14 +235,15 @@ async def save_game_endpoint(req: SaveDataRequest):
 
 @app.get("/api/load")
 async def load_game_endpoint(filename: str = "default_save.json"):
-    """读取跑团档案（安全防穿越）"""
+    """读取跑团档案（安全防穿越，无存档时安全返回空数据，绝不报 404）"""
     safe_filename = sanitize_save_filename(filename)
     save_path = os.path.join(SAVES_DIR, safe_filename)
     if not os.path.exists(save_path):
-        raise HTTPException(status_code=404, detail="未找到对应存档文件")
+        return {"status": "empty", "data": None, "message": "暂无历史存档"}
     with open(save_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     return {"status": "ok", "data": data, "filename": safe_filename}
+
 
 
 
