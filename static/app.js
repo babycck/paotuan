@@ -1398,6 +1398,17 @@ function performDiceRoll(type, bonus, dc, callback) {
 // 7. 剧情流与 API 通信 (DeepSeek / SSE)
 // =========================================================
 
+// 轻量化 HTML 实体安全转义，防止 XSS 注入
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function appendNarrativeEntry(role, text) {
   const stream = document.getElementById("narrative-stream");
   const entry = document.createElement("div");
@@ -1410,14 +1421,15 @@ function appendNarrativeEntry(role, text) {
   const content = document.createElement("div");
   content.className = "entry-content";
 
-  // 格式化文本段落
+  // 格式化文本段落（用户发言严格转义防止 XSS）
   const paragraphs = text.split("\n\n").filter(p => p.trim());
   paragraphs.forEach(p => {
     const pElem = document.createElement("p");
     if (p.includes("你接下来要干嘛？")) {
       pElem.className = "narrative-question";
     }
-    pElem.innerHTML = p.replace(/\n/g, "<br>");
+    const safeText = (role === 'user') ? escapeHtml(p) : p;
+    pElem.innerHTML = safeText.replace(/\n/g, "<br>");
     content.appendChild(pElem);
   });
 
@@ -1428,6 +1440,7 @@ function appendNarrativeEntry(role, text) {
 
   state.history.push({ role, content: text });
 }
+
 
 // 向后端发送行动意图
 async function sendPlayerAction(actionText) {
@@ -1523,6 +1536,7 @@ async function sendPlayerAction(actionText) {
 
     let hasReceivedFirstChunk = false;
     let accumulatedText = "";
+    let sseBuffer = "";
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
@@ -1531,8 +1545,10 @@ async function sendPlayerAction(actionText) {
       const { value, done } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split("\n");
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      // 将最后一个可能被网络分包截断的未闭合行留在缓冲区中等待后续拼合
+      sseBuffer = lines.pop() || "";
 
       for (const line of lines) {
         if (line.startsWith("data: ")) {
@@ -1565,6 +1581,7 @@ async function sendPlayerAction(actionText) {
         }
       }
     }
+
 
     if (timerInterval) {
       clearInterval(timerInterval);

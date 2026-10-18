@@ -7,7 +7,9 @@
 import os
 import json
 import random
+import re
 from typing import Dict, Any, List, Optional
+
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, StreamingResponse, FileResponse
@@ -200,29 +202,34 @@ async def update_config_endpoint(req: ConfigUpdateRequest):
     return {"status": "ok", "message": "配置更新成功"}
 
 
+def sanitize_save_filename(name: Optional[str]) -> str:
+    """对存档文件名进行安全清洗，彻底杜绝目录穿越与非法字符"""
+    base = os.path.basename(name or "default_save")
+    clean = re.sub(r'[^a-zA-Z0-9_\-\u4e00-\u9fa5]', '', base.replace(".json", ""))
+    return f"{clean or 'default_save'}.json"
+
+
 @app.post("/api/save")
 async def save_game_endpoint(req: SaveDataRequest):
-    """保存跑团档案"""
-    filename = req.filename or "default_save.json"
-    if not filename.endswith(".json"):
-        filename += ".json"
+    """保存跑团档案（安全防穿越）"""
+    filename = sanitize_save_filename(req.filename)
     save_path = os.path.join(SAVES_DIR, filename)
     with open(save_path, "w", encoding="utf-8") as f:
         json.dump(req.data, f, ensure_ascii=False, indent=2)
-    return {"status": "ok", "message": "档案保存成功"}
+    return {"status": "ok", "message": "档案保存成功", "filename": filename}
 
 
 @app.get("/api/load")
 async def load_game_endpoint(filename: str = "default_save.json"):
-    """读取跑团档案"""
-    if not filename.endswith(".json"):
-        filename += ".json"
-    save_path = os.path.join(SAVES_DIR, filename)
+    """读取跑团档案（安全防穿越）"""
+    safe_filename = sanitize_save_filename(filename)
+    save_path = os.path.join(SAVES_DIR, safe_filename)
     if not os.path.exists(save_path):
         raise HTTPException(status_code=404, detail="未找到对应存档文件")
     with open(save_path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    return {"status": "ok", "data": data}
+    return {"status": "ok", "data": data, "filename": safe_filename}
+
 
 
 class SuggestionRequest(BaseModel):
@@ -361,9 +368,10 @@ async def generate_character_profile_endpoint(req: GenerateProfileRequest):
     根据玩家随手输入的一两句灵感脑洞，由 DeepSeek 智能分析并提取全套形貌、生平与宿命信物
     输出严格 JSON 格式，具备双保险鉴权与多样化随机保底
     """
-    idea = req.idea.strip()
+    idea = req.idea.strip()[:300]
     if not idea:
         raise HTTPException(status_code=400, detail="灵感内容不可为空")
+
 
     cfg = load_config()
     api_key = (req.api_key or "").strip() or cfg.get("api_key", "").strip()
