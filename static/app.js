@@ -2646,8 +2646,7 @@ const DEFAULT_DESTINY_TALENTS = [
     "trigger": "天道大圆满"
   }
 ];
-  window.DESTINY_TALENTS = DEFAULT_DESTINY_TALENTS;
-}
+window.DESTINY_TALENTS = DEFAULT_DESTINY_TALENTS;
 
 
 // 核心沉浸式人名库 (男女分题材丰富人名库，彻底杜绝女叫男名与单调无味)
