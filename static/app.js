@@ -1672,19 +1672,81 @@ async function sendPlayerAction(actionText) {
       processedText = processedText.replace(match[0], "").trim();
     }
 
-    // 3. 突破行动智能建议胶囊 [SUGGESTIONS: ["...", "..."]]
-    const suggMatch = processedText.match(/\[SUGGESTIONS:\s*(\[.*?\])\]/i);
+    // 3. 突破行动智能建议胶囊解析 (三层防御机制：跨行多行匹配 -> 文本行提取 -> 永不空档智能生成)
+    let extractedSuggestions = [];
+
+    // 第一层：跨行多行 JSON 数组匹配 (支持换行、空格及中文符号清洗)
+    const suggMatch = processedText.match(/\[(?:SUGGESTIONS|谋策|智囊|建议):?\s*(\[[\s\S]*?\])\]/i);
     if (suggMatch) {
       try {
-        const suggestions = JSON.parse(suggMatch[1]);
-        renderActionSuggestions(suggestions);
+        let cleanJsonStr = suggMatch[1]
+          .replace(/[“”]/g, '"')
+          .replace(/，/g, ',')
+          .replace(/,\s*([\]\}])/g, '$1'); // 清除尾随逗号
+        extractedSuggestions = JSON.parse(cleanJsonStr);
       } catch (e) {
-        console.warn("解析建议胶囊失败:", e);
+        console.warn("JSON解析建议胶囊失败，尝试降级提取:", e);
       }
       processedText = processedText.replace(suggMatch[0], "").trim();
-    } else {
-      renderActionSuggestions([]);
     }
+
+    // 第二层：如果第一层未成功，尝试从正文末尾通过行正则捕获候选项
+    if (!extractedSuggestions || !Array.isArray(extractedSuggestions) || extractedSuggestions.length === 0) {
+      const lines = processedText.split("\n");
+      const listCandidates = [];
+      for (let i = lines.length - 1; i >= 0 && listCandidates.length < 3; i--) {
+        const line = lines[i].trim();
+        const m = line.match(/^(?:[①②③\d]+[\.、]|◆|【(?:选择|谋策|破局|招式)[一二三123]】)\s*(.+)/);
+        if (m) {
+          listCandidates.unshift(m[1].trim());
+        }
+      }
+      if (listCandidates.length >= 2) {
+        extractedSuggestions = listCandidates.map((txt, i) => ({
+          title: `破局策 ${i + 1}`,
+          desc: txt,
+          skill: "机智应变",
+          dc: 12 + i,
+          bonus: 4
+        }));
+      }
+    }
+
+    // 第三层：若模型本轮完全漏写，启动永不空档智能保底生成，彻底告别时有时无！
+    if (!extractedSuggestions || !Array.isArray(extractedSuggestions) || extractedSuggestions.length === 0) {
+      const t = (state.character && state.character.talent) 
+        ? state.character.talent 
+        : { name: "百毒不侵", trigger: "强韧抗毒" };
+      extractedSuggestions = [
+        {
+          title: "察言观色",
+          desc: "目光如炬扫视全场神色与慌乱破绽，反向掌控谈话话语权",
+          skill: "察言观色",
+          dc: 12,
+          bonus: 5
+        },
+        {
+          title: "将计就计",
+          desc: "顺着当下的局势佯装逢迎，暗中将祸水引向对手的核心死穴",
+          skill: "欺骗/巧手",
+          dc: 13,
+          bonus: 4
+        },
+        {
+          title: `奇策·${t.name}`,
+          desc: `暗扣袖底天命神技【${t.name}】，关键时刻一击定乾坤！`,
+          skill: t.trigger || "神技特权",
+          dc: 10,
+          bonus: 8
+        }
+      ];
+    }
+
+    // 渲染底部 3 个横排高质量行动卡片
+    renderActionSuggestions(extractedSuggestions);
+    // 同步刷新左侧【司命妙计 · 智囊参谋】抽屉
+    renderTacticalHints(extractedSuggestions);
+    state.lastSuggestions = extractedSuggestions;
 
     // 战利品与经验/金钱奖励解析 [REWARD: {"xp": 100, "gp": 30, "items": [...], "reason": "..."}]
     const rewardMatch = processedText.match(/\[REWARD:\s*(\{.*?\})\]/i);
@@ -1814,6 +1876,8 @@ async function sendPlayerAction(actionText) {
 
     // 自动保存本地存档
     saveGameToServer();
+    // 回合推演结束，实时渲染左侧【纪事卷宗】
+    renderChronicles();
 
   } catch (err) {
     if (timerInterval) {
@@ -6238,12 +6302,14 @@ function initApp() {
       if (subtabsRow) subtabsRow.classList.add("hidden");
       const page = document.getElementById("drawer-page-chronicles");
       if (page) page.classList.remove("hidden");
+      renderChronicles();
     } else if (targetDrawer === "hints") {
       if (drawerTitle) drawerTitle.textContent = "司命妙计 · 智囊参谋";
       if (drawerTag) drawerTag.textContent = "天道推演";
       if (subtabsRow) subtabsRow.classList.add("hidden");
       const page = document.getElementById("drawer-page-hints");
       if (page) page.classList.remove("hidden");
+      renderTacticalHints();
     }
   }
 
@@ -6422,3 +6488,196 @@ if (document.readyState === "loading") {
 } else {
   initApp();
 }
+// =========================================================
+// 8.1 动态纪事卷宗与司命妙计智囊渲染器 (真正联动大千推演)
+// =========================================================
+
+let lastRenderedSuggestions = []; // 缓存最新推演妙计
+
+function renderChronicles() {
+  const container = document.getElementById("drawer-page-chronicles");
+  if (!container) return;
+
+  const charName = (state.character && state.character.profile && state.character.profile.name) ? state.character.profile.name : "行者";
+  const identity = (state.character && state.character.profile && state.character.profile.identity) ? state.character.profile.identity : "微末入世者";
+  const world = state.theme || "古代宫闱 · 深宫弄权";
+  const chronicles = state.chronicles || [];
+  const npcs = state.npcRoster || [];
+
+  // 计算章节
+  const count = chronicles.length;
+  let chapterTitle = "第一章：破局立足";
+  let badgeColor = "badge-crimson";
+  if (count >= 15) {
+    chapterTitle = "第四章：权倾大势";
+    badgeColor = "badge-gold";
+  } else if (count >= 8) {
+    chapterTitle = "第三章：锋芒展露";
+    badgeColor = "badge-gold";
+  } else if (count >= 4) {
+    chapterTitle = "第二章：波澜暗涌";
+    badgeColor = "badge-blue";
+  }
+
+  // 核心意图推演
+  let intentText = `以【${identity}】之身立足当前乱局，勘破暗算，步步为营。`;
+  if (identity.includes("后") || identity.includes("妃") || identity.includes("华妃")) {
+    intentText = `执掌后宫凤印权柄，勘破深宫各方暗算死穴，将异己仇敌逐一斩落。`;
+  } else if (identity.includes("老板娘") || identity.includes("掌柜")) {
+    intentText = `坐镇龙门客栈要塞，黑白通吃，周旋于带刀豪客与官府鹰犬之间谋取全胜。`;
+  } else if (identity.includes("小宫女") || identity.includes("小厮") || identity.includes("微末") || identity.includes("死囚")) {
+    intentText = `在欺凌构陷与生死一线中隐忍求生，暗握关键把柄，借势绝地反杀逆天改命！`;
+  } else if (identity.includes("总") || identity.includes("大亨") || identity.includes("盟主")) {
+    intentText = `统领全盘大局，以雷霆手段镇压宵小，掌控核心命脉。`;
+  }
+
+  let html = `
+    <div class="card" style="padding: 12px 14px; margin-bottom: 12px; background: rgba(20,24,35,0.95); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px;">
+      <div class="section-title-row" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <h4 style="margin: 0; color: #f6d365; font-size: 0.98rem;">📖 篇章纪事 · 破局录</h4>
+        <span class="badge ${badgeColor}">${chapterTitle}</span>
+      </div>
+      <div style="font-size: 0.82rem; color: #cbd5e0; line-height: 1.5; margin-top: 8px;">
+        <div style="margin-bottom: 8px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; border-left: 3px solid #f6d365;">
+          <strong style="color:#f6d365;">🎯 当前核心意图：</strong>${intentText}
+        </div>
+        <div style="margin-bottom: 6px;">
+          <strong style="color:#cbd5e0;">📜 真实风云回目历程 (${count} 幕)：</strong>
+  `;
+
+  if (chronicles.length === 0) {
+    html += `
+      <div style="color: #a0aec0; font-size: 0.78rem; padding: 12px 0; text-align: center;">
+        尚处于大幕初启之时，且看第一步如何出招破局……
+      </div>
+    `;
+  } else {
+    html += `<div class="chronicles-timeline" style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; padding-right: 4px;">`;
+    // 逆序排列，最新回目呈现在顶部
+    chronicles.slice().reverse().forEach((item, idx) => {
+      const realIdx = chronicles.length - idx;
+      const cleanItem = String(item).replace(/^第\d+幕:\s*/, '');
+      html += `
+        <div style="background: rgba(255,255,255,0.04); border-left: 2px solid rgba(212,175,55,0.6); padding: 6px 10px; border-radius: 0 4px 4px 0; font-size: 0.78rem; color: #e2e8f0; line-height: 1.4;">
+          <span style="color: #f6d365; font-weight: bold; margin-right: 6px;">回目 ${realIdx}</span>
+          <span>${cleanItem}</span>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  // 结识涉案人物谱速览
+  if (npcs.length > 0) {
+    html += `
+      <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+        <strong style="color: #cbd5e0; font-size: 0.8rem;">👥 涉案/结缘人物：</strong>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+    `;
+    npcs.forEach(npc => {
+      html += `
+        <span class="badge badge-dim" style="font-size: 0.75rem; padding: 2px 8px;">
+          ${npc.name || '人物'} (${npc.role || 'NPC'} · ${npc.attitude || '中立'})
+        </span>
+      `;
+    });
+    html += `</div></div>`;
+  }
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+function renderTacticalHints(suggestions) {
+  const container = document.getElementById("drawer-hints-container");
+  if (!container) return;
+
+  if (suggestions && suggestions.length > 0) {
+    lastRenderedSuggestions = suggestions;
+  }
+  const list = (lastRenderedSuggestions && lastRenderedSuggestions.length > 0)
+    ? lastRenderedSuggestions
+    : (state.lastSuggestions || []);
+
+  const talent = (state.character && state.character.talent) 
+    ? state.character.talent 
+    : { name: "百毒不侵", desc: "吞服世间剧毒如饮琼浆，更能从指尖逼出毒液反噬他人" };
+
+  let html = "";
+
+  // 1. 神技专属破局奇策卡
+  html += `
+    <div class="hint-card-special" style="background: linear-gradient(135deg, rgba(212,175,55,0.2) 0%, rgba(20,24,35,0.95) 100%); border: 1px solid #f6d365; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s ease;" title="点击一键将此神技招式填入下方输入框">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <strong style="color: #f6d365; font-size: 0.86rem;">✨ 【神技奇策 · ${talent.name}】</strong>
+        <span class="badge badge-gold" style="font-size: 0.7rem;">降维绝杀 ↵</span>
+      </div>
+      <p style="font-size: 0.78rem; color: #e2e8f0; margin: 0; line-height: 1.45;">
+        面对当下僵局，暗中施展袖底神技【${talent.name}】，${talent.desc || '以超限金手指破局'}，绝地反制！
+      </p>
+    </div>
+  `;
+
+  // 2. 当前推演出的 3 大机智策略
+  if (list && list.length > 0) {
+    list.slice(0, 3).forEach((item, idx) => {
+      const title = (typeof item === 'object') ? (item.title || `妙计 ${idx + 1}`) : `妙策 ${idx + 1}`;
+      const desc = (typeof item === 'object') ? (item.desc || item.title) : String(item);
+      const skill = (typeof item === 'object') ? (item.skill || '机变谋略') : '机变谋略';
+      const dc = (typeof item === 'object' && item.dc) ? `DC ${item.dc}` : '见机行事';
+
+      const borderColors = ["#f6d365", "#63b3ed", "#48bb78"];
+      const bgColors = ["rgba(212,175,55,0.08)", "rgba(99,179,237,0.08)", "rgba(72,187,120,0.08)"];
+      const c = borderColors[idx % 3];
+      const bg = bgColors[idx % 3];
+
+      html += `
+        <div class="hint-card-item" data-action="【${title}】：${desc}" style="background: ${bg}; border-left: 3px solid ${c}; padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.8rem; color: #e2e8f0; cursor: pointer; margin-bottom: 6px; transition: transform 0.15s ease;" title="点击采纳此策，一键填入输入框">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <strong style="color: ${c};">妙计${idx + 1}【${title}】</strong>
+            <span style="font-size: 0.72rem; color: #a0aec0;">${skill} · ${dc}</span>
+          </div>
+          <div style="font-size: 0.76rem; color: #cbd5e0; line-height: 1.35;">${desc}</div>
+        </div>
+      `;
+    });
+  } else {
+    html += `
+      <div style="color: #a0aec0; font-size: 0.78rem; text-align: center; padding: 14px 0;">
+        静候第一轮风云推演，司命智囊将根据现场破局点实时献策……
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+
+  // 绑定点击一键填入输入框并关闭抽屉
+  const inputAction = document.getElementById("input-action");
+  container.querySelectorAll(".hint-card-item").forEach(card => {
+    card.onclick = () => {
+      const act = card.getAttribute("data-action");
+      if (inputAction && act) {
+        inputAction.value = act;
+        inputAction.focus();
+        closeDrawer();
+      }
+    };
+  });
+  const specialCard = container.querySelector(".hint-card-special");
+  if (specialCard) {
+    specialCard.onclick = () => {
+      if (inputAction) {
+        inputAction.value = `暗中发动天命神技【${talent.name}】，破开眼前危局！`;
+        inputAction.focus();
+        closeDrawer();
+      }
+    };
+  }
+}
+
+
+
